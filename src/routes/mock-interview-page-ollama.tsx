@@ -2,7 +2,7 @@
 import { Interview } from "@/types";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { LoaderPage } from "./loader-page";
+import { InteractiveLoadingPage } from "@/components/interactive-loading-page";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/config/firebase.config";
 import { CustomBreadCrumb } from "@/components/custom-bread-crumb";
@@ -34,11 +34,11 @@ async function generateQuestionsFromStoredInterview(
 
     // Use Ollama service to generate questions
     const questions = await ollamaService.generateInterviewQuestions({
-      objective: interview.objective,
-      interviewType: interview.interviewType,
-      depthLevel: interview.depthLevel,
+      objective: interview.objective || interview.position || 'General Interview',
+      interviewType: interview.interviewType || 'Technical',
+      depthLevel: interview.depthLevel || 'Intermediate',
       numQuestions: interview.numQuestions || 5,
-      resumeText: resumeText
+      resumeText: interview.resumeFile ? atob(interview.resumeFile.data) : undefined,
     });
 
     if (questions.length === 0) {
@@ -111,15 +111,11 @@ export const MockInterviewPageOllama = () => {
 
   if (isLoading || !questions.length) {
     return (
-      <div className="flex flex-col items-center justify-center w-full h-screen">
-        <LoaderPage className="w-full h-[70vh]" />
-        <p className="text-xl text-gray-700 mt-4 animate-pulse">
-          {isLoading ? "Generating questions with Ollama..." : "Loading..."}
-        </p>
-        <p className="text-sm text-gray-500 mt-2">
-          Using local AI - no internet required!
-        </p>
-      </div>
+      <InteractiveLoadingPage 
+        loadingMessage="Generating Interview Questions"
+        subtitle="Using local AI - no internet required!"
+        estimatedTime={45}
+      />
     );
   }
 
@@ -179,8 +175,9 @@ export const MockInterviewPageOllama = () => {
         
         <QuestionSectionOllama
           questions={questions}
-          interviewType={interview.interviewType}
-          depthLevel={interview.depthLevel}
+          interviewType={interview.interviewType || 'Technical'}
+          depthLevel={interview.depthLevel || 'Intermediate'}
+          duration={interview.duration || 30}
         />
       </div>
     </div>

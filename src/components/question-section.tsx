@@ -30,7 +30,11 @@ const speak = (text: string) => {
   return null;
 };
 
-const startSpeechRecognition = (onResult: (text: string) => void, onEnd: () => void) => {
+const startSpeechRecognition = (
+  onFinalResult: (text: string) => void, 
+  onInterimResult: (text: string) => void,
+  onEnd: () => void
+) => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
       console.warn("Speech Recognition not supported in this browser.");
@@ -41,29 +45,77 @@ const startSpeechRecognition = (onResult: (text: string) => void, onEnd: () => v
   recognition.lang = 'en-US';
   recognition.continuous = true;
   recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
 
   recognition.onstart = () => {
     console.log("Speech recognition started...");
   };
 
   recognition.onresult = (event) => {
+    let finalTranscript = '';
     let interimTranscript = '';
+    
     for (let i = event.resultIndex; i < event.results.length; ++i) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-            onResult(transcript);
+            finalTranscript += transcript;
         } else {
             interimTranscript += transcript;
         }
+    }
+    
+    // Call callbacks immediately for real-time display
+    if (finalTranscript) {
+      onFinalResult(finalTranscript);
+    }
+    if (interimTranscript) {
+      onInterimResult(interimTranscript);
     }
   };
 
   recognition.onerror = (event) => {
     console.error("Speech recognition error:", event.error);
-    toast.error("Speech recognition error", {
-        description: `Error: ${event.error}. Please check your microphone permissions.`
+    
+    let errorMessage = "";
+    let errorDescription = "";
+    
+    switch(event.error) {
+      case 'no-speech':
+        errorMessage = "No speech detected";
+        errorDescription = "Please make sure your microphone is working and try speaking clearly.";
+        break;
+      case 'audio-capture':
+        errorMessage = "Microphone access failed";
+        errorDescription = "Please allow microphone access in your browser settings and refresh the page.";
+        break;
+      case 'not-allowed':
+        errorMessage = "Microphone permission denied";
+        errorDescription = "Please click the microphone icon in your browser's address bar and allow access.";
+        break;
+      case 'network':
+        errorMessage = "Network error";
+        errorDescription = "Please check your internet connection and try again.";
+        break;
+      case 'aborted':
+        errorMessage = "Speech recognition stopped";
+        errorDescription = "Speech recognition was interrupted. You can try again.";
+        break;
+      case 'service-not-allowed':
+        errorMessage = "Speech service unavailable";
+        errorDescription = "Speech recognition service is not available. Try using text input instead.";
+        break;
+      default:
+        errorMessage = "Speech recognition error";
+        errorDescription = `Error: ${event.error}. Please try again or use text input.`;
+    }
+    
+    toast.error(errorMessage, {
+        description: errorDescription,
+        duration: 5000
     });
+    
     recognition.stop();
+    onEnd(); // Ensure the recording state is properly reset
   };
 
   recognition.onend = () => {

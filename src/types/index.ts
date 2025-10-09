@@ -19,6 +19,26 @@ export interface Interview {
   questions: { question: string; answer: string }[];
   createdAt: Timestamp;
   updateAt: Timestamp;
+  // Additional fields for enhanced interview types
+  name?: string;
+  objective?: string;
+  interviewType?: string;
+  depthLevel?: string;
+  numQuestions?: number;
+  duration?: number;
+  company?: string;
+  type?: string; // 'job-description' | 'resume-based'
+  jobDescription?: string;
+  companyName?: string;
+  resumeFile?: {
+    name: string;
+    size: number;
+    type: string;
+    data: string;
+    mimeType: string;
+  };
+  date?: Date | Timestamp;
+  feedbackGenerated?: boolean;
 }
 
 export interface UserAnswer {

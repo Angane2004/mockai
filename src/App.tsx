@@ -6,6 +6,7 @@ import ProtectRoutes from "@/layouts/protected-routes";
 import { MainLayout } from "@/layouts/main-layout";
 
 import HomePage from "@/routes/home";
+import { About } from "./routes/about";
 import { SignInPage } from "./routes/sign-in";
 import { SignUpPage } from "./routes/sign-up";
 import { Generate } from "./components/generate";
@@ -15,6 +16,8 @@ import { MockLoadPage } from "./routes/mock-load-page";
 import { MockInterviewPageOllama } from "./routes/mock-interview-page-ollama";
 import { Feedback } from "./routes/feedback";
 import { OllamaTestPage } from "./routes/ollama-test";
+import { CreateJobDescriptionInterview } from "./routes/create-job-description-interview";
+import { CreateResumeBasedInterview } from "./routes/create-resume-based-interview";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 
 const App = () => {
@@ -25,6 +28,7 @@ const App = () => {
         {/* public routes */}
         <Route element={<PublicLayout />}>
           <Route index element={<HomePage />} />
+          <Route path="/about" element={<About />} />
         </Route>
 
         {/* authentication layout */}
@@ -53,6 +57,8 @@ const App = () => {
             />
             <Route path="feedback/:interviewId" element={<Feedback />} />
             <Route path="ollama-test" element={<OllamaTestPage />} />
+            <Route path="create/job-description" element={<CreateJobDescriptionInterview />} />
+            <Route path="create/resume-based" element={<CreateResumeBasedInterview />} />
           </Route>
         </Route>
       </Routes>

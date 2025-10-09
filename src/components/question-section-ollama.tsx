@@ -8,7 +8,8 @@ import WebCam from "react-webcam";
 import { Textarea } from "./ui/textarea";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { ollamaService } from "@/scripts/ollama"; // Import Ollama service instead of Gemini
+import { ollamaService } from "@/scripts/ollama";
+import { InterviewTimer } from "@/components/interview-timer";
 import { addDoc, collection, serverTimestamp, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/config/firebase.config";
 import { useAuth } from "@clerk/clerk-react";
@@ -30,7 +31,11 @@ const speak = (text: string) => {
   return null;
 };
 
-const startSpeechRecognition = (onResult: (text: string) => void, onEnd: () => void) => {
+const startSpeechRecognition = (
+  onFinalResult: (text: string) => void, 
+  onInterimResult: (text: string) => void,
+  onEnd: () => void
+) => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
       console.warn("Speech Recognition not supported in this browser.");
@@ -41,29 +46,77 @@ const startSpeechRecognition = (onResult: (text: string) => void, onEnd: () => v
   recognition.lang = 'en-US';
   recognition.continuous = true;
   recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
 
   recognition.onstart = () => {
     console.log("Speech recognition started...");
   };
 
   recognition.onresult = (event) => {
+    let finalTranscript = '';
     let interimTranscript = '';
+    
     for (let i = event.resultIndex; i < event.results.length; ++i) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-            onResult(transcript);
+            finalTranscript += transcript;
         } else {
             interimTranscript += transcript;
         }
+    }
+    
+    // Call callbacks immediately for real-time display
+    if (finalTranscript) {
+      onFinalResult(finalTranscript);
+    }
+    if (interimTranscript) {
+      onInterimResult(interimTranscript);
     }
   };
 
   recognition.onerror = (event) => {
     console.error("Speech recognition error:", event.error);
-    toast.error("Speech recognition error", {
-        description: `Error: ${event.error}. Please check your microphone permissions.`
+    
+    let errorMessage = "";
+    let errorDescription = "";
+    
+    switch(event.error) {
+      case 'no-speech':
+        errorMessage = "No speech detected";
+        errorDescription = "Please make sure your microphone is working and try speaking clearly.";
+        break;
+      case 'audio-capture':
+        errorMessage = "Microphone access failed";
+        errorDescription = "Please allow microphone access in your browser settings and refresh the page.";
+        break;
+      case 'not-allowed':
+        errorMessage = "Microphone permission denied";
+        errorDescription = "Please click the microphone icon in your browser's address bar and allow access.";
+        break;
+      case 'network':
+        errorMessage = "Network error";
+        errorDescription = "Please check your internet connection and try again.";
+        break;
+      case 'aborted':
+        errorMessage = "Speech recognition stopped";
+        errorDescription = "Speech recognition was interrupted. You can try again.";
+        break;
+      case 'service-not-allowed':
+        errorMessage = "Speech service unavailable";
+        errorDescription = "Speech recognition service is not available. Try using text input instead.";
+        break;
+      default:
+        errorMessage = "Speech recognition error";
+        errorDescription = `Error: ${event.error}. Please try again or use text input.`;
+    }
+    
+    toast.error(errorMessage, {
+        description: errorDescription,
+        duration: 5000
     });
+    
     recognition.stop();
+    onEnd(); // Ensure the recording state is properly reset
   };
 
   recognition.onend = () => {
@@ -87,14 +140,16 @@ interface QuestionSectionProps {
   questions: string[];
   interviewType: string;
   depthLevel: string;
+  duration?: number; // in minutes
 }
 
-export const QuestionSectionOllama = ({ questions, interviewType, depthLevel }: QuestionSectionProps) => {
+export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, duration = 30 }: QuestionSectionProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSpeech, setCurrentSpeech] = useState<SpeechSynthesisUtterance | null>(null);
   const [isWebcamEnabled, setIsWebcamEnabled] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [userAnswer, setUserAnswer] = useState("");
+  const [interimAnswer, setInterimAnswer] = useState(""); // For real-time display
   const [speechRecognition, setSpeechRecognition] = useState<any>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<string[]>([]);
@@ -129,13 +184,21 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel }: 
       setIsRecording(false);
     } else {
       setUserAnswer(""); // Clear answer before starting new recording
+      setInterimAnswer(""); // Clear interim display
       setIsRecording(true);
       const recognition = startSpeechRecognition(
-        (text) => {
-          setUserAnswer(prev => prev + ' ' + text);
+        (finalText) => {
+          // Add final text to answer
+          setUserAnswer(prev => (prev + ' ' + finalText).trim());
+          setInterimAnswer(""); // Clear interim after adding final
+        },
+        (interimText) => {
+          // Update interim display immediately
+          setInterimAnswer(interimText);
         },
         () => {
           setIsRecording(false);
+          setInterimAnswer(""); // Clear interim when stopping
         }
       );
       setSpeechRecognition(recognition);
@@ -336,15 +399,32 @@ Make sure to evaluate each answer based on the ${depthLevel} level and ${intervi
           </TabsContent>
         </Tabs>
 
-        {/* User's Answer */}
+        {/* User's Answer with Real-time Display */}
         <div className="mt-4">
-          <h4 className="text-md font-semibold text-gray-700 mb-2">Your Answer:</h4>
-          <Textarea
-            value={userAnswer}
-            readOnly
-            placeholder="Start recording to see your answer here..."
-            className="min-h-[150px] resize-none"
-          />
+          <h4 className="text-md font-semibold text-gray-700 mb-2 flex items-center gap-2">
+            Your Answer:
+            {isRecording && (
+              <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full animate-pulse">
+                🎤 Recording...
+              </span>
+            )}
+          </h4>
+          <div className="relative">
+            <Textarea
+              value={userAnswer + (interimAnswer ? ' ' + interimAnswer : '')}
+              readOnly
+              placeholder={isRecording ? "Listening... start speaking!" : "Start recording to see your answer here..."}
+              className={`min-h-[150px] resize-none transition-colors ${
+                isRecording ? 'border-red-300 bg-red-50' : ''
+              }`}
+            />
+            {/* Show interim text styling */}
+            {interimAnswer && (
+              <div className="absolute bottom-2 right-2 text-xs text-gray-400 italic">
+                Speaking: {interimAnswer.slice(-20)}...
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Recording Controls */}
@@ -379,20 +459,30 @@ Make sure to evaluate each answer based on the ${depthLevel} level and ${intervi
         </div>
       </div>
 
-      {/* Right side: Webcam/Video Container */}
-      <div className="flex-1 flex flex-col items-center justify-center border p-4 bg-gray-50 rounded-md">
-        {isWebcamEnabled ? (
-          <WebCam
-            onUserMedia={() => setIsWebcamEnabled(true)}
-            onUserMediaError={() => setIsWebcamEnabled(false)}
-            className="w-full h-full object-cover rounded-md"
-          />
-        ) : (
-          <WebcamIcon className="min-w-24 min-h-24 text-muted-foreground" />
-        )}
-        <Button onClick={() => setIsWebcamEnabled(!isWebcamEnabled)} className="mt-4">
-          {isWebcamEnabled ? "Disable Webcam" : "Enable Webcam"}
-        </Button>
+      {/* Right side: Timer and Webcam/Video Container */}
+      <div className="flex-1 flex flex-col gap-4">
+        {/* Interview Timer */}
+        <InterviewTimer 
+          durationMinutes={duration}
+          onTimeUp={generateAndSaveReport}
+          autoStart={true}
+        />
+        
+        {/* Webcam Container */}
+        <div className="flex-1 flex flex-col items-center justify-center border p-4 bg-gray-50 rounded-md">
+          {isWebcamEnabled ? (
+            <WebCam
+              onUserMedia={() => setIsWebcamEnabled(true)}
+              onUserMediaError={() => setIsWebcamEnabled(false)}
+              className="w-full h-full object-cover rounded-md"
+            />
+          ) : (
+            <WebcamIcon className="min-w-24 min-h-24 text-muted-foreground" />
+          )}
+          <Button onClick={() => setIsWebcamEnabled(!isWebcamEnabled)} className="mt-4">
+            {isWebcamEnabled ? "Disable Webcam" : "Enable Webcam"}
+          </Button>
+        </div>
       </div>
     </div>
   );

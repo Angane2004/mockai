@@ -1,15 +1,13 @@
 import { Headings } from "@/components/headings";
 import { InterviewPin } from "@/components/pin";
-import { Button } from "@/components/ui/button";
+import { EnhancedAddNewButton } from "@/components/enhanced-add-new-button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/config/firebase.config";
 import { Interview } from "@/types";
 import { useAuth } from "@clerk/clerk-react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { getDocs } from "firebase/firestore";
 
@@ -67,15 +65,7 @@ export const Dashboard = () => {
           title="Dashboard"
           description="Create and start you AI Mock interview"
         />
-        <Link to={"/generate/create"}>
-          <Button size="sm" className="bg-transparent text-blue-500 border border-blue-500 hover:text-white hover:border-transparent transition-all duration-300 relative overflow-hidden group py-2 px-4 rounded-full hover:bg-blue-500">
-            <span className="absolute inset-0 block bg-gradient-to-r from-transparent via-white/50 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-500 ease-in-out"></span>
-            <span className="relative z-10 flex items-center justify-center transition-transform duration-300">
-              <Plus className="mr-2 transition-transform duration-300 group-hover:rotate-90" />
-              Add New
-            </span>
-          </Button>
-        </Link>
+        <EnhancedAddNewButton />
       </div>
 
       <Separator className="my-8" />
@@ -103,15 +93,7 @@ export const Dashboard = () => {
               There is no available data to show. Please add some new mock
               interviews
             </p>
-            <Link to={"/generate/create"}>
-              <Button size="sm" className="bg-transparent text-blue-500 border border-blue-500 hover:text-white hover:border-transparent transition-all duration-300 relative overflow-hidden group py-2 px-4 rounded-full hover:bg-blue-500">
-                <span className="absolute inset-0 block bg-gradient-to-r from-transparent via-white/50 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-500 ease-in-out"></span>
-                <span className="relative z-10 flex items-center justify-center transition-transform duration-300">
-                  <Plus className="mr-2 transition-transform duration-300 group-hover:rotate-90" />
-                  Add New
-                </span>
-              </Button>
-            </Link>
+            <EnhancedAddNewButton />
           </div>
         )}
       </div>

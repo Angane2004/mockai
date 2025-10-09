@@ -266,7 +266,7 @@ export const RecordAnswer = ({
             )
           }
           onClick={() => setOpen(!open)}
-          disbaled={!aiResult}
+          disabled={!aiResult}
         />
       </div>
 

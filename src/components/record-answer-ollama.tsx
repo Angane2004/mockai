@@ -293,11 +293,10 @@ export const RecordAnswerOllama = ({
       )}
 
       <SaveModal
-        open={open}
-        setOpen={setOpen}
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        onConfirm={saveUserAnswer}
         loading={loading}
-        onSave={saveUserAnswer}
-        aiResult={aiResult}
       />
     </div>
   );

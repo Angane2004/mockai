@@ -19,37 +19,42 @@ type ButtonVariant =
   | undefined;
 
 interface TooltipButtonProps {
-  content: string;
+  content?: string;
+  tooltip?: string;
   icon: React.ReactNode;
   onClick: () => void;
   buttonVariant?: ButtonVariant;
   buttonClassName?: string;
+  className?: string;
   delay?: number;
-  disbaled?: boolean;
+  disabled?: boolean;
   loading?: boolean;
 }
 
 export const TooltipButton = ({
   content,
+  tooltip,
   icon,
   onClick,
   buttonVariant = "ghost",
   buttonClassName = "",
+  className = "",
   delay = 0,
-  disbaled = false,
+  disabled = false,
   loading = false,
 }: TooltipButtonProps) => {
+  const tooltipText = tooltip || content || "";
   return (
     <TooltipProvider delayDuration={delay}>
       <Tooltip>
         <TooltipTrigger
-          className={disbaled ? "cursor-not-allowed" : "cursor-pointer"}
+          className={disabled ? "cursor-not-allowed" : "cursor-pointer"}
         >
           <Button
             size={"icon"}
-            disabled={disbaled}
+            disabled={disabled}
             variant={buttonVariant}
-            className={buttonClassName}
+            className={`${buttonClassName} ${className}`}
             onClick={onClick}
           >
             {loading ? (
@@ -60,7 +65,7 @@ export const TooltipButton = ({
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{loading ? "Loading..." : content}</p>
+          <p>{loading ? "Loading..." : tooltipText}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

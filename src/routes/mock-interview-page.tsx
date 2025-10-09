@@ -161,8 +161,8 @@ export const MockInterviewPage = () => {
       <div className="mt-4 w-full flex flex-col items-start gap-4">
         <QuestionSection
           questions={questions}
-          interviewType={interview.interviewType}
-          depthLevel={interview.depthLevel}
+          interviewType={interview.interviewType || 'Technical'}
+          depthLevel={interview.depthLevel || 'Intermediate'}
         />
       </div>
     </div>

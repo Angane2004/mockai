@@ -1,21 +1,18 @@
 import { db } from "@/config/firebase.config";
-import { Interview, UserAnswer } from "@/types";
+import { Interview } from "@/types";
 import { useAuth } from "@clerk/clerk-react";
 import {
   collection,
-  doc,
-  getDoc,
   getDocs,
   query,
   where,
 } from "firebase/firestore";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { LoaderPage } from "./loader-page";
 import { CustomBreadCrumb } from "@/components/custom-bread-crumb";
 import { Headings } from "@/components/headings";
-import { InterviewPin } from "@/components/pin";
 import {
   Accordion,
   AccordionContent,
@@ -87,94 +84,171 @@ export const Feedback = () => {
   return (
     <>
       {isConfettiActive && <Confetti width={width} height={height} recycle={false} />}
-      <div className="flex flex-col w-full gap-8 py-5">
-        <div className="flex items-center justify-between w-full gap-2">
-          <CustomBreadCrumb
-            breadCrumbPage={"Feedback"}
-            breadCrumpItems={[
-              { label: "Mock Interviews", link: "/generate" },
-              {
-                label: `${report.interviewName || "Interview"}`,
-                link: `/generate/interview/${interviewId}`,
-              },
-            ]}
-          />
-        </div>
-
-        <Headings
-          title="Congratulations!"
-          description="Your personalized feedback is now available. Dive in to see your strengths, areas for improvement, and tips to help you ace your next interview."
-        />
-
-        <Card className="flex flex-col items-center justify-center p-6 bg-blue-50 border-blue-200 shadow-md rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="text-blue-600 h-6 w-6" />
-            <h3 className="text-2xl font-bold text-blue-700">Overall Rating</h3>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <div className="flex flex-col w-full gap-8 py-8 px-4 max-w-6xl mx-auto">
+          {/* Header Section with Trophy Animation */}
+          <div className="text-center space-y-4">
+            <div className="flex justify-center mb-6">
+              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 rounded-full animate-bounce">
+                <TrendingUp className="h-16 w-16 text-white" />
+              </div>
+            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              🎉 Interview Complete!
+            </h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Your personalized AI feedback is ready! Here's your detailed performance analysis to help you ace your next interview.
+            </p>
           </div>
-          <div className="flex items-center gap-2 text-4xl font-bold text-blue-800">
-            <Star className="text-yellow-400 h-8 w-8" fill="currentColor" />
-            <span>{report.overallRating} / 10</span>
-          </div>
-          <p className="text-center text-sm text-gray-600 mt-2">{report.overallFeedback}</p>
-        </Card>
 
-        <Headings title="Detailed Breakdown" isSubHeading />
-        
-        <Accordion type="single" collapsible className="space-y-6">
-          {report.questionFeedbacks?.map((feed, index) => (
-            <AccordionItem
-              key={index}
-              value={`question-${index}`}
-              className="border rounded-lg shadow-md"
-            >
-              <AccordionTrigger
-                className={cn(
-                  "px-5 py-3 flex items-center justify-between text-base rounded-t-lg transition-colors hover:no-underline",
-                  `hover:bg-gray-50`
-                )}
-              >
-                <span>{feed.question}</span>
-              </AccordionTrigger>
-
-              <AccordionContent className="px-5 py-6 bg-white rounded-b-lg space-y-5 shadow-inner">
-                <div className="flex items-center text-lg font-semibold to-gray-700">
-                  <Star className="inline mr-2 text-yellow-400" />
-                  <span>Rating: {feed.rating} / 10</span>
+          {/* Overall Score Card with Radial Progress */}
+          <Card className="relative overflow-hidden bg-gradient-to-br from-white to-blue-50 border-2 border-blue-200 shadow-xl rounded-2xl">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full opacity-10 transform translate-x-8 -translate-y-8"></div>
+            <div className="relative p-8 text-center">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-3 rounded-full">
+                  <Star className="h-8 w-8 text-white" fill="currentColor" />
                 </div>
+                <h3 className="text-3xl font-bold text-gray-800">Overall Performance</h3>
+              </div>
+              
+              {/* Large Rating Display */}
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <div className="text-6xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                  {report.overallRating}
+                </div>
+                <div className="text-2xl text-gray-400 font-medium">/10</div>
+              </div>
+              
+              {/* Rating Emoji */}
+              <div className="text-4xl mb-4">
+                {report.overallRating >= 9 ? '🏆' : 
+                 report.overallRating >= 8 ? '⭐' : 
+                 report.overallRating >= 7 ? '😊' : 
+                 report.overallRating >= 6 ? '👍' : 
+                 report.overallRating >= 5 ? '😐' : '💪'}
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+                <div 
+                  className="bg-gradient-to-r from-green-400 to-blue-500 h-3 rounded-full transition-all duration-1000 ease-out"
+                  style={{ width: `${(report.overallRating / 10) * 100}%` }}
+                ></div>
+              </div>
+              
+              <p className="text-gray-700 leading-relaxed max-w-2xl mx-auto">{report.overallFeedback}</p>
+            </div>
+          </Card>
 
-                <Card className="border-none space-y-3 p-4 bg-green-50 rounded-lg shadow-md">
-                  <CardTitle className="flex items-center text-lg">
-                    <ThumbsUp className="mr-2 text-green-600" />
-                    Ideal Answer
-                  </CardTitle>
-                  <CardDescription className="font-medium text-gray-700">
-                    {feed.idealAnswer}
-                  </CardDescription>
-                </Card>
+          {/* Section Header */}
+          <div className="text-center space-y-2">
+            <h2 className="text-3xl font-bold text-gray-800">Question-by-Question Analysis</h2>
+            <p className="text-gray-600">Detailed feedback for each interview question</p>
+          </div>
+          
+          <Accordion type="single" collapsible className="space-y-8">
+            {report.questionFeedbacks?.map((feed: any, index: number) => (
+              <AccordionItem
+                key={index}
+                value={`question-${index}`}
+                className="border-0 bg-white rounded-2xl shadow-lg overflow-hidden"
+              >
+                <AccordionTrigger className="px-6 py-4 hover:no-underline bg-gradient-to-r from-gray-50 to-blue-50">
+                  <div className="flex items-center gap-4 w-full">
+                    <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-semibold text-gray-800 text-base leading-relaxed">{feed.question}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
+                        feed.rating >= 8 ? 'bg-green-100 text-green-700' :
+                        feed.rating >= 6 ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        <Star className="h-4 w-4" fill="currentColor" />
+                        {feed.rating}/10
+                      </div>
+                    </div>
+                  </div>
+                </AccordionTrigger>
 
-                <Card className="border-none space-y-3 p-4 bg-yellow-50 rounded-lg shadow-md">
-                  <CardTitle className="flex items-center text-lg">
-                    <CircleCheck className="mr-2 text-yellow-600" />
-                    Your Answer
-                  </CardTitle>
-                  <CardDescription className="font-medium text-gray-700">
-                    {feed.userAnswer}
-                  </CardDescription>
-                </Card>
+                <AccordionContent className="px-6 py-6 space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {/* Your Answer */}
+                    <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-md">
+                      <div className="p-5">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="bg-blue-600 p-2 rounded-lg">
+                            <CircleCheck className="h-5 w-5 text-white" />
+                          </div>
+                          <h4 className="font-bold text-blue-900">Your Answer</h4>
+                        </div>
+                        <p className="text-gray-700 leading-relaxed">
+                          {feed.userAnswer || 'No answer provided'}
+                        </p>
+                      </div>
+                    </Card>
 
-                <Card className="border-none space-y-3 p-4 bg-red-50 rounded-lg shadow-md">
-                  <CardTitle className="flex items-center text-lg">
-                    <Lightbulb className="mr-2 text-red-600" />
-                    Feedback
-                  </CardTitle>
-                  <CardDescription className="font-medium text-gray-700">
-                    {feed.feedback}
-                  </CardDescription>
-                </Card>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+                    {/* Ideal Answer */}
+                    <Card className="border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 shadow-md">
+                      <div className="p-5">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="bg-green-600 p-2 rounded-lg">
+                            <ThumbsUp className="h-5 w-5 text-white" />
+                          </div>
+                          <h4 className="font-bold text-green-900">Ideal Answer</h4>
+                        </div>
+                        <p className="text-gray-700 leading-relaxed">
+                          {feed.idealAnswer}
+                        </p>
+                      </div>
+                    </Card>
+                  </div>
+
+                  {/* Feedback */}
+                  <Card className="border border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md">
+                    <div className="p-5">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="bg-purple-600 p-2 rounded-lg">
+                          <Lightbulb className="h-5 w-5 text-white" />
+                        </div>
+                        <h4 className="font-bold text-purple-900">AI Feedback & Improvement Tips</h4>
+                      </div>
+                      <p className="text-gray-700 leading-relaxed">
+                        {feed.feedback}
+                      </p>
+                    </div>
+                  </Card>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+          
+          {/* Action Section */}
+          <Card className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-xl">
+            <div className="p-6 text-center">
+              <h3 className="text-2xl font-bold mb-2">Ready for Your Next Interview?</h3>
+              <p className="mb-4 opacity-90">Keep practicing to improve your skills!</p>
+              <div className="flex justify-center gap-4">
+                <button 
+                  onClick={() => navigate('/generate')}
+                  className="bg-white text-indigo-600 px-6 py-2 rounded-full font-semibold hover:bg-gray-100 transition-colors"
+                >
+                  Take Another Interview
+                </button>
+                <button 
+                  onClick={() => window.print()}
+                  className="bg-indigo-700 text-white px-6 py-2 rounded-full font-semibold hover:bg-indigo-800 transition-colors"
+                >
+                  Print Report
+                </button>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
     </>
   );

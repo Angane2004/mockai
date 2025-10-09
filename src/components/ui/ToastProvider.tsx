@@ -19,8 +19,8 @@ export const toast = ({ title, description }: ToastProps) => {
 
 // Optional: Create a styled Toast component
 export const Toast = React.forwardRef<
-  HTMLDivElement,
-  ToastPrimitive.ToastProps
+  React.ElementRef<typeof ToastPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof ToastPrimitive.Root>
 >(({ className, ...props }, ref) => (
   <ToastPrimitive.Root
     ref={ref}

@@ -18,11 +18,11 @@ import {
 } from "./ui/form";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { db } from "@/config/firebase.config";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { Interview } from "@/types";
 
 // ---------------- Schema -----------------
 const formSchema = z.object({
@@ -54,7 +54,11 @@ const readFileAsDataURL = (file: File): Promise<string> => {
   });
 };
 
-export const FormMockInterview = () => {
+interface FormMockInterviewProps {
+  initialData?: Interview | null;
+}
+
+export const FormMockInterview = ({ initialData: _initialData }: FormMockInterviewProps) => {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {

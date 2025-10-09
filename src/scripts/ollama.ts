@@ -26,22 +26,75 @@ interface AIResponse {
 class OllamaService {
   private baseUrl = 'http://localhost:11434';
   private model = 'llama3';
+  private warmupDone = false;
 
   /**
-   * Send a prompt to Ollama and get response
+   * Warm up the model for faster subsequent requests
    */
-  async generateResponse(prompt: string): Promise<string> {
+  async warmup(): Promise<void> {
+    if (this.warmupDone) return;
+    
     try {
-      const response = await fetch(`${this.baseUrl}/api/generate`, {
+      await fetch(`${this.baseUrl}/api/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           model: this.model,
-          prompt: prompt,
+          prompt: 'Hi',
           stream: false,
+          options: {
+            num_predict: 1
+          }
         }),
+      });
+      this.warmupDone = true;
+      console.log('Ollama model warmed up');
+    } catch (error) {
+      console.warn('Warmup failed, but continuing:', error);
+    }
+  }
+
+  /**
+   * Send a prompt to Ollama and get response (highly optimized)
+   */
+  async generateResponse(prompt: string, fast = false): Promise<string> {
+    try {
+      // Ensure warmup
+      if (!this.warmupDone) {
+        await this.warmup();
+      }
+
+      const requestBody = {
+        model: this.model,
+        prompt: prompt,
+        stream: false,
+        options: fast ? {
+          temperature: 0.6,
+          num_predict: 150,
+          top_k: 5,
+          top_p: 0.8,
+          repeat_penalty: 1.1,
+          num_ctx: 1024,
+          num_thread: 4
+        } : {
+          temperature: 0.7,
+          num_predict: 300,
+          top_k: 10,
+          top_p: 0.9,
+          repeat_penalty: 1.1,
+          num_ctx: 2048,
+          num_thread: 4
+        }
+      };
+
+      const response = await fetch(`${this.baseUrl}/api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -57,7 +110,27 @@ class OllamaService {
   }
 
   /**
-   * Generate interview questions based on resume and interview details
+   * Extract technologies and skills from resume
+   */
+  async extractResumeSkills(resumeText: string): Promise<string[]> {
+    const prompt = `Extract all technical skills, programming languages, frameworks, tools, and technologies mentioned in this resume.
+
+Resume content: "${resumeText}"
+
+Return ONLY a comma-separated list of technologies/skills found. Examples: React, JavaScript, Python, Docker, AWS, etc.
+If no specific technologies found, return "General programming"`;
+
+    try {
+      const response = await this.generateResponse(prompt, true);
+      return response.split(',').map(skill => skill.trim()).filter(skill => skill.length > 0);
+    } catch (error) {
+      console.warn('Error extracting skills:', error);
+      return ['General programming'];
+    }
+  }
+
+  /**
+   * Generate interview questions based on resume and interview details (Enhanced)
    */
   async generateInterviewQuestions(
     interviewData: {
@@ -68,36 +141,80 @@ class OllamaService {
       resumeText?: string;
     }
   ): Promise<string[]> {
-    const prompt = `You are an AI interview assistant. 
-Based on the candidate's objective "${interviewData.objective}", interview type "${interviewData.interviewType}", and depth level "${interviewData.depthLevel}"${interviewData.resumeText ? `, and their resume content: "${interviewData.resumeText}"` : ''}, 
-generate ${interviewData.numQuestions || 5} highly relevant interview questions. 
+    let skills: string[] = [];
+    
+    // Extract specific skills if resume is provided
+    if (interviewData.resumeText) {
+      skills = await this.extractResumeSkills(interviewData.resumeText);
+      console.log('Extracted skills from resume:', skills);
+    }
 
-Requirements:
-- Questions should be appropriate for ${interviewData.depthLevel} level
-- Focus on ${interviewData.interviewType} interview type
-- Make questions relevant to the objective: ${interviewData.objective}
-${interviewData.resumeText ? '- Consider the candidate\'s background from their resume' : ''}
+    const skillsContext = skills.length > 0 ? 
+      `\n\nSpecific technologies/skills from candidate's resume: ${skills.slice(0, 8).join(', ')}` : '';
 
-Return ONLY a numbered list of questions, no additional text or explanations.
+    const prompt = `You are an expert technical interviewer. Generate ${interviewData.numQuestions} interview questions for a ${interviewData.interviewType} interview at ${interviewData.depthLevel} level.
 
-Example format:
-1. Question one here
-2. Question two here
-3. Question three here`;
+${interviewData.resumeText ? 
+  `IMPORTANT: Use the SPECIFIC technologies and tools from the candidate's resume. Do NOT use placeholders like "[specific technology]". Use actual technology names.` : 
+  ''
+}
+
+Candidate's target role: ${interviewData.objective}
+Interview level: ${interviewData.depthLevel}
+Interview type: ${interviewData.interviewType}${skillsContext}
+
+${interviewData.resumeText ? `Resume content: "${interviewData.resumeText.substring(0, 1000)}..."\n` : ''}
+Guidelines:
+- Ask about SPECIFIC technologies mentioned in their resume (use actual names, not placeholders)
+- Questions should match ${interviewData.depthLevel} difficulty level
+- Focus on ${interviewData.interviewType} aspects
+- Include practical scenarios and problem-solving
+- Ask about specific projects or experience they mention
+
+Return ONLY numbered questions, no explanations:
+
+1.
+2.
+3.`;
 
     try {
-      const response = await this.generateResponse(prompt);
+      // Use fast mode for question generation
+      const response = await this.generateResponse(prompt, true);
       
       // Parse the response to extract questions
-      return response
+      const questions = response
         .split('\n')
         .map((line: string) => line.replace(/^\d+\.\s*/, '').trim())
-        .filter((q: string) => q.length > 0)
+        .filter((q: string) => q.length > 10) // Filter out very short responses
         .slice(0, interviewData.numQuestions);
+
+      // Fallback questions if generation fails
+      if (questions.length === 0) {
+        return this.getFallbackQuestions(interviewData.interviewType, interviewData.depthLevel, skills);
+      }
+
+      return questions;
     } catch (error) {
       console.error('Error generating questions:', error);
-      return [];
+      return this.getFallbackQuestions(interviewData.interviewType, interviewData.depthLevel, skills);
     }
+  }
+
+  /**
+   * Fallback questions if generation fails
+   */
+  private getFallbackQuestions(interviewType: string, depthLevel: string, skills: string[]): string[] {
+    const mainSkill = skills.length > 0 ? skills[0] : 'programming';
+    
+    const fallbackQuestions = [
+      `Tell me about your experience with ${mainSkill} and how you've used it in recent projects.`,
+      `What challenges have you faced while working with ${mainSkill} and how did you overcome them?`,
+      `Can you walk me through a specific project where you implemented ${mainSkill} solutions?`,
+      `How do you stay updated with the latest ${mainSkill} best practices and trends?`,
+      `Describe a time when you had to optimize performance in a ${mainSkill} application.`
+    ];
+
+    return fallbackQuestions.slice(0, 5);
   }
 
   /**
@@ -140,20 +257,23 @@ Example format:
         cleanResponse = jsonMatch[0];
       }
 
-      const parsedResponse = JSON.parse(cleanResponse) as AIResponse;
+      const parsedResponse = JSON.parse(cleanResponse) as any;
+      
+      // Extract rating from response (could be 'rating' or 'ratings')
+      const rating = parsedResponse.rating || parsedResponse.ratings;
       
       // Validate required fields
-      if (typeof parsedResponse.rating !== 'number' || 
+      if (typeof rating !== 'number' || 
           typeof parsedResponse.feedback !== 'string' || 
           typeof parsedResponse.correct_ans !== 'string') {
         throw new Error('Invalid response format from Ollama');
       }
 
       // Ensure rating is within valid range
-      parsedResponse.rating = Math.max(1, Math.min(10, parsedResponse.rating));
+      const validatedRating = Math.max(1, Math.min(10, rating));
       
       return {
-        ratings: parsedResponse.rating, // Note: using 'ratings' to match existing interface
+        ratings: validatedRating,
         feedback: parsedResponse.feedback,
         correct_ans: parsedResponse.correct_ans,
       };

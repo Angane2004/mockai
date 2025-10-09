@@ -71,21 +71,33 @@ class OllamaService {
         prompt: prompt,
         stream: false,
         options: fast ? {
-          temperature: 0.6,
-          num_predict: 150,
+          temperature: 0.3,
+          num_predict: 100,
+          top_k: 3,
+          top_p: 0.7,
+          repeat_penalty: 1.05,
+          num_ctx: 512,
+          num_thread: -1,
+          num_gpu: -1,
+          num_batch: 512,
+          low_vram: false,
+          f16_kv: true,
+          use_mlock: true,
+          use_mmap: true
+        } : {
+          temperature: 0.5,
+          num_predict: 200,
           top_k: 5,
           top_p: 0.8,
           repeat_penalty: 1.1,
           num_ctx: 1024,
-          num_thread: 4
-        } : {
-          temperature: 0.7,
-          num_predict: 300,
-          top_k: 10,
-          top_p: 0.9,
-          repeat_penalty: 1.1,
-          num_ctx: 2048,
-          num_thread: 4
+          num_thread: -1,
+          num_gpu: -1,
+          num_batch: 512,
+          low_vram: false,
+          f16_kv: true,
+          use_mlock: true,
+          use_mmap: true
         }
       };
 
@@ -152,27 +164,12 @@ If no specific technologies found, return "General programming"`;
     const skillsContext = skills.length > 0 ? 
       `\n\nSpecific technologies/skills from candidate's resume: ${skills.slice(0, 8).join(', ')}` : '';
 
-    const prompt = `You are an expert technical interviewer. Generate ${interviewData.numQuestions} interview questions for a ${interviewData.interviewType} interview at ${interviewData.depthLevel} level.
+    const prompt = `Generate ${interviewData.numQuestions} ${interviewData.interviewType} questions for ${interviewData.depthLevel} level.
 
-${interviewData.resumeText ? 
-  `IMPORTANT: Use the SPECIFIC technologies and tools from the candidate's resume. Do NOT use placeholders like "[specific technology]". Use actual technology names.` : 
-  ''
-}
+Role: ${interviewData.objective}
+Skills: ${skills.slice(0, 5).join(', ')}
 
-Candidate's target role: ${interviewData.objective}
-Interview level: ${interviewData.depthLevel}
-Interview type: ${interviewData.interviewType}${skillsContext}
-
-${interviewData.resumeText ? `Resume content: "${interviewData.resumeText.substring(0, 1000)}..."\n` : ''}
-Guidelines:
-- Ask about SPECIFIC technologies mentioned in their resume (use actual names, not placeholders)
-- Questions should match ${interviewData.depthLevel} difficulty level
-- Focus on ${interviewData.interviewType} aspects
-- Include practical scenarios and problem-solving
-- Ask about specific projects or experience they mention
-
-Return ONLY numbered questions, no explanations:
-
+Return ONLY numbered questions:
 1.
 2.
 3.`;

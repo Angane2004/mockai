@@ -23,12 +23,14 @@ import { motion } from 'framer-motion';
 interface FeedbackData {
   overallRating: number;
   overallFeedback: string;
+  overallConfidenceLevel?: number;
   questionFeedbacks: Array<{
     question: string;
     userAnswer: string;
     rating: number;
     feedback: string;
     idealAnswer: string;
+    confidenceLevel?: number;
   }>;
   analysisData?: {
     confidenceLevel: number;
@@ -98,7 +100,7 @@ export const EnhancedFeedbackReport: React.FC<EnhancedFeedbackReportProps> = ({
   const performanceInsights = [
     {
       title: 'Confidence Level',
-      score: feedbackData.analysisData?.confidenceLevel || Math.min(averageRating * 10, 100),
+      score: feedbackData.overallConfidenceLevel ? feedbackData.overallConfidenceLevel * 10 : (feedbackData.analysisData?.confidenceLevel || Math.min(averageRating * 10, 100)),
       icon: <Target className="h-5 w-5" />,
       color: 'blue'
     },
@@ -157,7 +159,7 @@ export const EnhancedFeedbackReport: React.FC<EnhancedFeedbackReportProps> = ({
         className="text-center"
       >
         <div className="flex items-center justify-center gap-4 mb-4">
-          <div className={`text-6xl animate-bounce`}>
+          <div className="text-6xl">
             {getRatingEmoji(feedbackData.overallRating)}
           </div>
           <div>
@@ -343,11 +345,28 @@ export const EnhancedFeedbackReport: React.FC<EnhancedFeedbackReportProps> = ({
                         </h3>
                         <p className="text-gray-700">{question.question}</p>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <span className="text-2xl">{getRatingEmoji(question.rating)}</span>
-                        <div className={`text-xl font-bold ${getRatingColor(question.rating)}`}>
-                          {question.rating}/10
+                      <div className="flex items-center gap-4 ml-4">
+                        <div className="text-center">
+                          <span className="text-2xl">{getRatingEmoji(question.rating)}</span>
+                          <div className={`text-lg font-bold ${getRatingColor(question.rating)}`}>
+                            {question.rating}/10
+                          </div>
+                          <div className="text-xs text-gray-500">Rating</div>
                         </div>
+                        {question.confidenceLevel && (
+                          <div className="text-center">
+                            <div className="text-2xl">
+                              {question.confidenceLevel >= 8 ? '🎯' : question.confidenceLevel >= 6 ? '💪' : question.confidenceLevel >= 4 ? '😐' : '😟'}
+                            </div>
+                            <div className={`text-lg font-bold ${
+                              question.confidenceLevel >= 7 ? 'text-green-600' : 
+                              question.confidenceLevel >= 5 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              {question.confidenceLevel}/10
+                            </div>
+                            <div className="text-xs text-gray-500">Confidence</div>
+                          </div>
+                        )}
                       </div>
                     </div>
 

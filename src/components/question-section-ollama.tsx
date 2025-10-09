@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { TooltipButton } from "./tooltip-button";
@@ -14,6 +14,8 @@ import { addDoc, collection, serverTimestamp, getDocs, query, where } from "fire
 import { db } from "@/config/firebase.config";
 import { useAuth } from "@clerk/clerk-react";
 import { Loader2 } from "lucide-react";
+import { ReportLoading } from "@/components/report-loading";
+import { InterviewRecorder } from "@/components/interview-recorder";
 
 // Helper functions for speech
 const speak = (text: string) => {
@@ -29,6 +31,42 @@ const speak = (text: string) => {
   }
   console.warn("Web Speech API not supported.");
   return null;
+};
+
+// Audio confidence analysis based on speech patterns
+const analyzeAudioConfidence = (transcript: string, duration: number): number => {
+  let confidence = 5; // Base confidence (1-10 scale)
+  
+  // Length factor (longer answers generally show more confidence)
+  if (transcript.length > 100) confidence += 1;
+  if (transcript.length > 200) confidence += 1;
+  
+  // Hesitation markers (reduce confidence)
+  const hesitationWords = ['um', 'uh', 'like', 'you know', 'i think', 'maybe', 'sort of', 'kind of'];
+  const hesitationCount = hesitationWords.reduce((count, word) => {
+    return count + (transcript.toLowerCase().match(new RegExp(word, 'g')) || []).length;
+  }, 0);
+  confidence -= Math.min(hesitationCount * 0.5, 2);
+  
+  // Speaking pace (words per second)
+  const wordCount = transcript.split(' ').length;
+  const wordsPerSecond = duration > 0 ? wordCount / duration : 0;
+  if (wordsPerSecond > 1.5 && wordsPerSecond < 3) confidence += 1; // Good pace
+  if (wordsPerSecond < 0.5) confidence -= 1; // Too slow (hesitant)
+  if (wordsPerSecond > 4) confidence -= 1; // Too fast (nervous)
+  
+  // Confidence words (increase confidence)
+  const confidenceWords = ['definitely', 'absolutely', 'certainly', 'confident', 'sure', 'exactly', 'precisely'];
+  const confidenceCount = confidenceWords.reduce((count, word) => {
+    return count + (transcript.toLowerCase().match(new RegExp(word, 'g')) || []).length;
+  }, 0);
+  confidence += Math.min(confidenceCount * 0.5, 2);
+  
+  // Structure indicators (complete sentences show confidence)
+  const sentences = transcript.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  if (sentences.length > 1) confidence += 0.5;
+  
+  return Math.max(1, Math.min(10, Math.round(confidence)));
 };
 
 const startSpeechRecognition = (
@@ -144,6 +182,13 @@ interface QuestionSectionProps {
 }
 
 export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, duration = 30 }: QuestionSectionProps) => {
+  // Start recording when component mounts
+  useEffect(() => {
+    setIsInterviewRecording(true);
+    return () => {
+      setIsInterviewRecording(false);
+    };
+  }, []);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSpeech, setCurrentSpeech] = useState<SpeechSynthesisUtterance | null>(null);
   const [isWebcamEnabled, setIsWebcamEnabled] = useState(false);
@@ -151,12 +196,60 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
   const [userAnswer, setUserAnswer] = useState("");
   const [interimAnswer, setInterimAnswer] = useState(""); // For real-time display
   const [speechRecognition, setSpeechRecognition] = useState<any>(null);
+  const [recordingStartTime, setRecordingStartTime] = useState<number>(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<string[]>([]);
+  const [audioConfidenceScores, setAudioConfidenceScores] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [reportProgress, setReportProgress] = useState(0);
+  const [reportStep, setReportStep] = useState('analyzing');
+  const [isInterviewRecording, setIsInterviewRecording] = useState(false);
+  const [sessionRecording, setSessionRecording] = useState<Blob | null>(null);
   const navigate = useNavigate();
   const { userId } = useAuth();
   const { interviewId } = useParams();
+
+  // Recording handlers
+  const handleRecordingStart = (stream: MediaStream) => {
+    console.log('Interview recording started');
+  };
+
+  const handleRecordingStop = () => {
+    console.log('Interview recording stopped');
+  };
+
+  const handleRecordingReady = async (recordingBlob: Blob) => {
+    setSessionRecording(recordingBlob);
+    
+    // Save recording to Firebase or local storage for later access
+    try {
+      // Convert blob to base64 for storage
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64data = reader.result as string;
+        
+        // Save to Firebase with interview report
+        await addDoc(collection(db, "interviewRecordings"), {
+          interviewId,
+          userId,
+          recordingData: base64data,
+          recordingSize: recordingBlob.size,
+          recordingType: recordingBlob.type,
+          createdAt: serverTimestamp(),
+        });
+        
+        toast.success('Session recorded successfully!', {
+          description: 'Your interview recording is saved and can be viewed later.'
+        });
+      };
+      reader.readAsDataURL(recordingBlob);
+    } catch (error) {
+      console.error('Error saving recording:', error);
+      toast.error('Failed to save recording', {
+        description: 'Recording could not be saved, but feedback will still be generated.'
+      });
+    }
+  };
 
   const handlePlayQuestion = (qst: string) => {
     if (isPlaying && currentSpeech) {
@@ -182,9 +275,15 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         speechRecognition.stop();
       }
       setIsRecording(false);
+      
+      // Calculate confidence when recording stops
+      const recordingDuration = (Date.now() - recordingStartTime) / 1000; // in seconds
+      const confidenceScore = analyzeAudioConfidence(userAnswer, recordingDuration);
+      setAudioConfidenceScores(prev => [...prev, confidenceScore]);
     } else {
       setUserAnswer(""); // Clear answer before starting new recording
       setInterimAnswer(""); // Clear interim display
+      setRecordingStartTime(Date.now()); // Track start time
       setIsRecording(true);
       const recognition = startSpeechRecognition(
         (finalText) => {
@@ -199,6 +298,15 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         () => {
           setIsRecording(false);
           setInterimAnswer(""); // Clear interim when stopping
+          
+          // Calculate confidence when recording stops
+          const recordingDuration = (Date.now() - recordingStartTime) / 1000;
+          const confidenceScore = analyzeAudioConfidence(userAnswer + interimAnswer, recordingDuration);
+          setAudioConfidenceScores(prev => {
+            const newScores = [...prev];
+            newScores[currentQuestionIndex] = confidenceScore;
+            return newScores;
+          });
         }
       );
       setSpeechRecognition(recognition);
@@ -213,54 +321,65 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
   };
 
   const generateAndSaveReport = async () => {
+    // Stop recording when finishing interview
+    setIsInterviewRecording(false);
+    
     setIsLoading(true);
+    setReportProgress(0);
+    setReportStep('analyzing');
+    
     try {
-      // Check if Ollama service is available
+      // Step 1: Health check
+      setReportProgress(10);
       const isHealthy = await ollamaService.checkHealth();
       if (!isHealthy) {
         throw new Error("Ollama service is not available. Please make sure Ollama is running.");
       }
 
+      // Step 2: Prepare data
+      setReportProgress(20);
+      setReportStep('evaluating');
       const allAnswers = questions.map((q, i) => ({
         question: q,
-        userAnswer: userAnswers[i] || ""
+        userAnswer: userAnswers[i] || "",
+        confidenceLevel: audioConfidenceScores[i] || 5
       }));
       
-      const prompt = `You are an expert interviewer. You have just completed a mock interview.
-Here are the questions asked and the user's answers:
-        
-${allAnswers.map(a => `Question: "${a.question}"
-User Answer: "${a.userAnswer}"
+      // Step 3: Generate optimized prompt
+      setReportProgress(30);
+      const prompt = `Analyze this ${interviewType} interview (${depthLevel} level):
+
+${allAnswers.map((a, i) => `${i+1}. Q: ${a.question}
+A: ${a.userAnswer}
+Confidence Level: ${a.confidenceLevel}/10
 
 `).join('')}
 
-Based on the user's performance in a ${interviewType} interview at a ${depthLevel} level, provide a detailed report.
-
-IMPORTANT: Return ONLY a valid JSON object with the following structure (no additional text or formatting):
+Return JSON only:
 {
   "overallRating": number (1-10),
   "overallFeedback": string,
-  "questionFeedbacks": [
-    {
-      "question": string,
-      "userAnswer": string,
-      "rating": number (1-10),
-      "feedback": string,
-      "idealAnswer": string
-    }
-  ]
-}
-
-For the idealAnswer, provide a correct and complete answer for each question.
-Make sure to evaluate each answer based on the ${depthLevel} level and ${interviewType} interview type.`;
+  "overallConfidenceLevel": number (1-10),
+  "questionFeedbacks": [{
+    "question": string,
+    "userAnswer": string,
+    "rating": number (1-10),
+    "feedback": string,
+    "idealAnswer": string,
+    "confidenceLevel": number (1-10)
+  }]
+}`;
       
-      toast("Generating report with Ollama...", {
-        description: "Please wait while AI analyzes your performance.",
-      });
-
-      const response = await ollamaService.generateResponse(prompt);
+      // Step 4: Generate report
+      setReportProgress(50);
+      setReportStep('generating');
       
-      // Clean and parse JSON response
+      const response = await ollamaService.generateResponse(prompt, true); // Use fast mode
+      
+      // Step 5: Parse response
+      setReportProgress(70);
+      setReportStep('finalizing');
+      
       let cleanResponse = response.trim();
       cleanResponse = cleanResponse.replace(/```json\s*|\s*```/g, '');
       cleanResponse = cleanResponse.replace(/```\s*|\s*```/g, '');
@@ -270,20 +389,27 @@ Make sure to evaluate each answer based on the ${depthLevel} level and ${intervi
         cleanResponse = jsonMatch[0];
       }
 
+      setReportProgress(80);
       let report;
       try {
         report = JSON.parse(cleanResponse);
       } catch (parseError) {
         // Fallback if JSON parsing fails
+        const avgConfidence = audioConfidenceScores.length > 0 
+          ? Math.round(audioConfidenceScores.reduce((sum, score) => sum + score, 0) / audioConfidenceScores.length)
+          : 6;
+        
         report = {
           overallRating: 7,
           overallFeedback: "Interview completed successfully. Detailed analysis could not be parsed, but your answers show good understanding of the topics discussed.",
+          overallConfidenceLevel: avgConfidence,
           questionFeedbacks: allAnswers.map((qa, index) => ({
             question: qa.question,
             userAnswer: qa.userAnswer,
             rating: 7,
             feedback: "Good attempt at answering the question. Consider providing more specific examples and details.",
-            idealAnswer: "A comprehensive answer should address all aspects of the question with relevant examples and clear explanations."
+            idealAnswer: "A comprehensive answer should address all aspects of the question with relevant examples and clear explanations.",
+            confidenceLevel: qa.confidenceLevel
           }))
         };
         console.warn("Using fallback report due to JSON parsing error:", parseError);
@@ -302,7 +428,8 @@ Make sure to evaluate each answer based on the ${depthLevel} level and ${intervi
         }));
       }
 
-      // Save the report to Firebase
+      // Step 6: Save the report to Firebase
+      setReportProgress(90);
       const reportRef = await addDoc(collection(db, "interviewReports"), {
         interviewId,
         userId,
@@ -313,6 +440,9 @@ Make sure to evaluate each answer based on the ${depthLevel} level and ${intervi
         createdAt: serverTimestamp(),
         generatedBy: "Ollama Llama3"
       });
+      
+      // Final step
+      setReportProgress(100);
       
       toast.success("Report Generated with Ollama!", { 
         description: "Your AI-powered feedback is ready to view." 
@@ -342,6 +472,17 @@ Make sure to evaluate each answer based on the ${depthLevel} level and ${intervi
       generateAndSaveReport();
     }
   };
+
+  // Show loading screen when generating report
+  if (isLoading && reportProgress > 0) {
+    return (
+      <ReportLoading 
+        progress={reportProgress} 
+        currentStep={reportStep}
+        estimatedTime={20}
+      />
+    );
+  }
 
   return (
     <div className="w-full flex flex-col md:flex-row gap-6">
@@ -459,13 +600,21 @@ Make sure to evaluate each answer based on the ${depthLevel} level and ${intervi
         </div>
       </div>
 
-      {/* Right side: Timer and Webcam/Video Container */}
+      {/* Right side: Timer, Recording, and Webcam Container */}
       <div className="flex-1 flex flex-col gap-4">
         {/* Interview Timer */}
         <InterviewTimer 
           durationMinutes={duration}
           onTimeUp={generateAndSaveReport}
           autoStart={true}
+        />
+        
+        {/* Interview Recorder */}
+        <InterviewRecorder
+          isRecording={isInterviewRecording}
+          onStartRecording={handleRecordingStart}
+          onStopRecording={handleRecordingStop}
+          onRecordingReady={handleRecordingReady}
         />
         
         {/* Webcam Container */}

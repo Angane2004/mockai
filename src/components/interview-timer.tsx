@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Clock, Play, Pause, Square, AlertTriangle } from 'lucide-react';
+import { Clock, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface InterviewTimerProps {
@@ -19,7 +18,6 @@ export const InterviewTimer: React.FC<InterviewTimerProps> = ({
 }) => {
   const [timeLeft, setTimeLeft] = useState(durationMinutes * 60);
   const [isRunning, setIsRunning] = useState(autoStart);
-  const [isPaused, setIsPaused] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
 
   const formatTime = useCallback((seconds: number) => {
@@ -51,7 +49,7 @@ export const InterviewTimer: React.FC<InterviewTimerProps> = ({
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
-    if (isRunning && !isPaused && timeLeft > 0) {
+    if (isRunning && timeLeft > 0) {
       interval = setInterval(() => {
         setTimeLeft(prev => {
           const newTime = prev - 1;
@@ -91,26 +89,9 @@ export const InterviewTimer: React.FC<InterviewTimerProps> = ({
     }
 
     return () => clearInterval(interval);
-  }, [isRunning, isPaused, timeLeft, onTimeUp]);
+  }, [isRunning, timeLeft, onTimeUp]);
 
-  const startTimer = () => {
-    setIsRunning(true);
-    setIsPaused(false);
-  };
-
-  const pauseTimer = () => {
-    setIsPaused(true);
-  };
-
-  const resumeTimer = () => {
-    setIsPaused(false);
-  };
-
-  const stopTimer = () => {
-    setIsRunning(false);
-    setIsPaused(false);
-    setTimeLeft(durationMinutes * 60);
-  };
+  // Removed button handlers as buttons are no longer needed
 
   const totalSeconds = durationMinutes * 60;
   const progressPercentage = ((totalSeconds - timeLeft) / totalSeconds) * 100;
@@ -147,62 +128,15 @@ export const InterviewTimer: React.FC<InterviewTimerProps> = ({
           />
         </div>
 
-        {/* Control Buttons */}
-        <div className="flex justify-center gap-2">
-          {!isRunning && (
-            <Button
-              onClick={startTimer}
-              size="sm"
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Play className="h-4 w-4 mr-1" />
-              Start
-            </Button>
-          )}
-
-          {isRunning && !isPaused && (
-            <Button
-              onClick={pauseTimer}
-              size="sm"
-              variant="outline"
-            >
-              <Pause className="h-4 w-4 mr-1" />
-              Pause
-            </Button>
-          )}
-
-          {isRunning && isPaused && (
-            <Button
-              onClick={resumeTimer}
-              size="sm"
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Play className="h-4 w-4 mr-1" />
-              Resume
-            </Button>
-          )}
-
-          <Button
-            onClick={stopTimer}
-            size="sm"
-            variant="destructive"
-            disabled={!isRunning && timeLeft === totalSeconds}
-          >
-            <Square className="h-4 w-4 mr-1" />
-            Stop
-          </Button>
-        </div>
+        {/* Control Buttons - Removed as requested */}
 
         {/* Status */}
         <div className="text-center mt-3 text-sm">
           {!isRunning && timeLeft === totalSeconds && (
             <span className="text-gray-500">Ready to start</span>
           )}
-          {isRunning && !isPaused && (
+          {isRunning && (
             <span className="text-green-600">• Interview in progress</span>
-          )}
-          {isPaused && (
-            <span className="text-yellow-600">⏸️ Interview paused</span>
           )}
           {timeLeft === 0 && (
             <span className="text-red-600">⏰ Time expired</span>

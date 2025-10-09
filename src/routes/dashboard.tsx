@@ -3,6 +3,7 @@ import { InterviewPin } from "@/components/pin";
 import { EnhancedAddNewButton } from "@/components/enhanced-add-new-button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RecordedSessions } from "@/components/recorded-sessions";
 import { db } from "@/config/firebase.config";
 import { Interview } from "@/types";
 import { useAuth } from "@clerk/clerk-react";
@@ -70,33 +71,41 @@ export const Dashboard = () => {
 
       <Separator className="my-8" />
 
-      <div className="md:grid md:grid-cols-3 gap-3 py-4">
-        {loading ? (
-          Array.from({ length: 6 }).map((_, index) => (
-            <Skeleton key={index} className="h-24 md:h-32 rounded-md" />
-          ))
-        ) : interviews.length > 0 ? (
-          interviews.map((interview) => (
-            <InterviewPin key={interview.id} interview={interview} />
-          ))
-        ) : (
-          <div className="md:col-span-3 w-full flex flex-grow items-center justify-center h-96 flex-col">
-            <img
-              src="/assets/svg/not-found.svg"
-              className="w-44 h-44 object-contain"
-              alt=""
-            />
-            <h2 className="text-lg font-semibold text-muted-foreground">
-              No Data Found
-            </h2>
-            <p className="w-full md:w-96 text-center text-sm text-neutral-400 mt-4">
-              There is no available data to show. Please add some new mock
-              interviews
-            </p>
-            <EnhancedAddNewButton />
-          </div>
-        )}
+      {/* Interview Section */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">🎯 Your Interviews</h2>
+        <div className="md:grid md:grid-cols-3 gap-3 py-4">
+          {loading ? (
+            Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton key={index} className="h-24 md:h-32 rounded-md" />
+            ))
+          ) : interviews.length > 0 ? (
+            interviews.map((interview) => (
+              <InterviewPin key={interview.id} interview={interview} />
+            ))
+          ) : (
+            <div className="md:col-span-3 w-full flex flex-grow items-center justify-center h-96 flex-col">
+              <img
+                src="/assets/svg/not-found.svg"
+                className="w-44 h-44 object-contain"
+                alt=""
+              />
+              <h2 className="text-lg font-semibold text-muted-foreground">
+                No Data Found
+              </h2>
+              <p className="w-full md:w-96 text-center text-sm text-neutral-400 mt-4">
+                There is no available data to show. Please add some new mock
+                interviews
+              </p>
+              <EnhancedAddNewButton />
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Recorded Sessions Section */}
+      <Separator className="my-8" />
+      <RecordedSessions />
     </>
   );
 };

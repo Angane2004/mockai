@@ -8,19 +8,21 @@ interface InteractiveLoadingPageProps {
   loadingMessage: string;
   subtitle?: string;
   estimatedTime?: number; // in seconds
+  hasResume?: boolean; // whether resume was uploaded
 }
 
 export const InteractiveLoadingPage = ({ 
   loadingMessage, 
   subtitle = "Using local AI - no internet required!",
-  estimatedTime = 30 
+  estimatedTime = 30,
+  hasResume = false
 }: InteractiveLoadingPageProps) => {
   const [progress, setProgress] = useState(0);
   const [currentTip, setCurrentTip] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
 
-  const processingSteps = [
+  const processingSteps = hasResume ? [
     {
       icon: <Database className="h-6 w-6" />,
       title: "Loading Model",
@@ -37,6 +39,25 @@ export const InteractiveLoadingPage = ({
       icon: <Brain className="h-6 w-6" />,
       title: "Generating Questions",
       description: "Creating personalized interview questions",
+      color: "text-purple-500"
+    },
+    {
+      icon: <Sparkles className="h-6 w-6" />,
+      title: "Final Preparation",
+      description: "Setting up your interview environment",
+      color: "text-orange-500"
+    }
+  ] : [
+    {
+      icon: <Database className="h-6 w-6" />,
+      title: "Loading Model",
+      description: "Initializing Llama 3 AI model",
+      color: "text-blue-500"
+    },
+    {
+      icon: <Brain className="h-6 w-6" />,
+      title: "Generating Questions",
+      description: "Creating tailored interview questions",
       color: "text-purple-500"
     },
     {

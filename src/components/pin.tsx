@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Button } from "./ui/button";
-import { Calendar, Eye, Sparkles, Trash } from "lucide-react";
+import { Calendar, Eye, RotateCw, Sparkles, Trash } from "lucide-react";
 import { Interview } from "@/types";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -74,7 +74,7 @@ export const InterviewPin = ({ interview, onMockPage }: InterviewPinProps) => {
                           size="icon"
                           className="h-8 w-8 text-blue-500"
                         >
-                          <Sparkles className="w-4 h-4" />
+                          <RotateCw className="w-4 h-4" />
                         </Button>
                       </Link>
                     </TooltipTrigger>

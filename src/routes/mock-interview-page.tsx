@@ -13,7 +13,7 @@ import { QuestionSection } from "@/components/question-section";
 import { toast } from "sonner";
 import { chatSession } from "@/scripts";
 
-// 🔹 Gemini AI helper
+//  Gemini AI helper
 async function generateQuestionsFromStoredInterview(
   interview: Interview
 ): Promise<string[]> {
@@ -39,7 +39,7 @@ Return them only as a numbered list, no answers.`,
     });
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${
         import.meta.env.VITE_GEMINI_API_KEY
       }`,
       {

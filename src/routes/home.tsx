@@ -65,12 +65,13 @@ const HomePage = () => {
       <div className=" w-full my-10">
         <Marquee pauseOnHover>
           <MarqueImg img="/assets/img/logo/firebase.png" />
-          <MarqueImg img="/assets/img/logo/meet.png" />
-          <MarqueImg img="/assets/img/logo/firebase.png" />
-          <MarqueImg img="/assets/img/logo/microsoft.png" />
-          <MarqueImg img="/assets/img/logo/meet.png" />
+          <MarqueImg img="/assets/img/logo/reactjs.png" />
+          <MarqueImg img="/assets/img/logo/next.png" />
+          <MarqueImg img="/assets/img/logo/mongo.png" />
           <MarqueImg img="/assets/img/logo/tailwindcss.png" />
           <MarqueImg img="/assets/img/logo/microsoft.png" />
+          <MarqueImg img="/assets/img/logo/gemini.png" />
+          <MarqueImg img="/assets/img/logo/meet.png" />
         </Marquee>
       </div>
 

@@ -12,8 +12,9 @@ import { Generate } from "./components/generate";
 import { Dashboard } from "./routes/dashboard";
 import { CreateEditPage } from "./routes/create-edit-page";
 import { MockLoadPage } from "./routes/mock-load-page";
-import { MockInterviewPage } from "./routes/mock-interview-page";
+import { MockInterviewPageOllama } from "./routes/mock-interview-page-ollama";
 import { Feedback } from "./routes/feedback";
+import { OllamaTestPage } from "./routes/ollama-test";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 
 const App = () => {
@@ -48,9 +49,10 @@ const App = () => {
             
             <Route
               path="interview/:interviewId/start"
-              element={<MockInterviewPage />}
+              element={<MockInterviewPageOllama />}
             />
             <Route path="feedback/:interviewId" element={<Feedback />} />
+            <Route path="ollama-test" element={<OllamaTestPage />} />
           </Route>
         </Route>
       </Routes>

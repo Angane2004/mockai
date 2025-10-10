@@ -113,8 +113,8 @@ export const MockInterviewPageOllama = () => {
     return (
       <InteractiveLoadingPage 
         loadingMessage="Generating Interview Questions"
-        subtitle="Using optimized local AI - faster processing!"
-        estimatedTime={25}
+        subtitle="Ultra-fast generation with smart caching!"
+        estimatedTime={5}
         hasResume={!!interview?.resumeFile}
       />
     );

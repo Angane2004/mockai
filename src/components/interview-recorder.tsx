@@ -41,20 +41,52 @@ export const InterviewRecorder: React.FC<InterviewRecorderProps> = ({
         }
       });
 
+      // Choose best available codec
+      let mimeType = 'video/webm';
+      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) {
+        mimeType = 'video/webm;codecs=vp9,opus';
+      } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) {
+        mimeType = 'video/webm;codecs=vp8,opus';
+      } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus')) {
+        mimeType = 'video/webm;codecs=h264,opus';
+      }
+      
+      console.log('Using MIME type:', mimeType);
+      
       const recorder = new MediaRecorder(mediaStream, {
-        mimeType: 'video/webm; codecs=vp8,opus'
+        mimeType,
+        videoBitsPerSecond: 2500000, // 2.5 Mbps for good quality
+        audioBitsPerSecond: 128000   // 128 kbps for audio
       });
 
       const chunks: Blob[] = [];
       
       recorder.ondataavailable = (event) => {
+        console.log('Data available:', event.data.size, 'bytes');
         if (event.data.size > 0) {
           chunks.push(event.data);
         }
       };
+      
+      recorder.onstart = () => {
+        console.log('MediaRecorder started successfully');
+      };
+      
+      recorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+        toast.error('Recording error', {
+          description: 'An error occurred during recording. Please try again.'
+        });
+      };
 
       recorder.onstop = () => {
-        const recordingBlob = new Blob(chunks, { type: 'video/webm' });
+        console.log('MediaRecorder stopped, chunks collected:', chunks.length);
+        const totalSize = chunks.reduce((total, chunk) => total + chunk.size, 0);
+        console.log('Total recording size:', totalSize, 'bytes');
+        
+        const recordingBlob = new Blob(chunks, { type: mimeType });
+        console.log('Created blob:', recordingBlob.size, 'bytes, type:', recordingBlob.type);
+        
         setRecordedChunks([]);
         onRecordingReady(recordingBlob);
         
@@ -62,10 +94,12 @@ export const InterviewRecorder: React.FC<InterviewRecorderProps> = ({
         mediaStream.getTracks().forEach(track => track.stop());
       };
 
+      console.log('Starting MediaRecorder with timeslice 1000ms');
       recorder.start(1000); // Collect data every second
       setMediaRecorder(recorder);
       setStream(mediaStream);
       setRecordingDuration(0);
+      console.log('MediaRecorder state:', recorder.state);
       
       // Start duration timer
       intervalRef.current = setInterval(() => {
@@ -103,12 +137,26 @@ export const InterviewRecorder: React.FC<InterviewRecorderProps> = ({
     }
   };
 
-  // Auto-start/stop based on prop
+  // Auto-start/stop based on prop with better retake handling
   useEffect(() => {
     if (isRecording && !mediaRecorder) {
-      startRecording();
-    } else if (!isRecording && mediaRecorder) {
+      console.log('Starting recording due to isRecording=true and no mediaRecorder');
+      // Add slight delay for retakes to ensure previous recording is fully cleaned up
+      const timer = setTimeout(() => {
+        startRecording();
+      }, 200);
+      
+      return () => clearTimeout(timer);
+    } else if (!isRecording && mediaRecorder && mediaRecorder.state === 'recording') {
+      console.log('Stopping recording due to isRecording=false');
       stopRecording();
+    }
+  }, [isRecording]); // Remove mediaRecorder from dependencies to avoid loop
+
+  // Reset duration when not recording
+  useEffect(() => {
+    if (!isRecording) {
+      setRecordingDuration(0);
     }
   }, [isRecording]);
 
@@ -181,6 +229,16 @@ export const InterviewRecorder: React.FC<InterviewRecorderProps> = ({
               <p className="text-gray-400 text-xs">
                 Recording will start automatically when interview begins
               </p>
+              {!mediaRecorder && (
+                <Button 
+                  onClick={startRecording} 
+                  size="sm" 
+                  variant="outline"
+                  className="mt-2"
+                >
+                  Start Recording Manually
+                </Button>
+              )}
             </div>
           )}
         </div>

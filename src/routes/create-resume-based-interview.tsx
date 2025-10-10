@@ -88,7 +88,6 @@ export const CreateResumeBasedInterview = () => {
       toast.success('Resume uploaded successfully! 🎉', {
         description: `${file.name} is ready for analysis`,
         duration: 3000,
-        className: 'animate-bounce'
       });
     }, 2000);
   }, []);
@@ -205,7 +204,7 @@ export const CreateResumeBasedInterview = () => {
 
       <div className="flex items-center justify-between">
         <Headings
-          title="Create Resume-Based Interview 📄"
+          title="Create Resume-Based Interview"
           description="Upload your resume for personalized interview questions"
         />
         <Button
@@ -289,7 +288,7 @@ export const CreateResumeBasedInterview = () => {
                       <CheckCircle2 className="h-8 w-8 text-green-600 animate-pulse" />
                       <div className="absolute inset-0 bg-green-600 rounded-full animate-ping opacity-20"></div>
                     </div>
-                    <p className="text-green-700 font-medium">✨ Resume uploaded successfully!</p>
+                    <p className="text-green-700 font-medium">Resume uploaded successfully!</p>
                     <p className="text-sm text-gray-600 mt-1">{fileState.file.name}</p>
                     <p className="text-xs text-gray-500">
                       {(fileState.file.size / 1024 / 1024).toFixed(2)} MB
@@ -336,10 +335,10 @@ export const CreateResumeBasedInterview = () => {
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Technical">🔧 Technical</SelectItem>
-                    <SelectItem value="Behavioral">🧠 Behavioral</SelectItem>
-                    <SelectItem value="System Design">🏗️ System Design</SelectItem>
-                    <SelectItem value="Mixed">🎯 Mixed Interview</SelectItem>
+                    <SelectItem value="Technical">Technical</SelectItem>
+                    <SelectItem value="Behavioral">Behavioral</SelectItem>
+                    <SelectItem value="System Design">System Design</SelectItem>
+                    <SelectItem value="Mixed">Mixed Interview</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -351,14 +350,14 @@ export const CreateResumeBasedInterview = () => {
                     <SelectValue placeholder="Select level" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Fresher">🌱 Fresher (0-1 years)</SelectItem>
-                    <SelectItem value="Intermediate">🚀 Intermediate (2-4 years)</SelectItem>
-                    <SelectItem value="Experienced">⭐ Experienced (5+ years)</SelectItem>
+                    <SelectItem value="Fresher">Fresher (0-1 years)</SelectItem>
+                    <SelectItem value="Intermediate">Intermediate (2-4 years)</SelectItem>
+                    <SelectItem value="Experienced">Experienced (5+ years)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <Label htmlFor="numQuestions" className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4" />
                   Questions Count
@@ -388,11 +387,11 @@ export const CreateResumeBasedInterview = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="15">15 minutes ⚡</SelectItem>
-                  <SelectItem value="30">30 minutes 📝</SelectItem>
-                  <SelectItem value="45">45 minutes 🎯</SelectItem>
-                  <SelectItem value="60">60 minutes 🔥</SelectItem>
-                  <SelectItem value="90">90 minutes 💪</SelectItem>
+                  <SelectItem value="15">15 minutes</SelectItem>
+                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="45">45 minutes</SelectItem>
+                  <SelectItem value="60">60 minutes</SelectItem>
+                  <SelectItem value="90">90 minutes</SelectItem>
                 </SelectContent>
               </Select>
             </div>

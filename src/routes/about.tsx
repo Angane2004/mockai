@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
   Brain, 
@@ -17,7 +17,13 @@ import {
   Video,
   Clock,
   Download,
-  Upload
+  Upload,
+  Target,
+  FileText,
+  TrendingUp,
+  Headphones,
+  Database,
+  Lock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -75,74 +81,103 @@ export const About = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-      {/* Hero Section */}
-      <section className="py-20 px-4 text-center">
-        <div className="max-w-4xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className="flex justify-center mb-6">
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-full">
-                <Brain className="h-12 w-12 text-white" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      {/* Hero Section
+      <section className="relative py-24 px-4 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-transparent to-indigo-600/5"></div>
+        <div className="relative max-w-7xl mx-auto">
+          <div className="text-center max-w-4xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <div className="flex justify-center mb-8">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full blur-lg opacity-30 animate-pulse"></div>
+                  <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-2xl shadow-xl">
+                    <Brain className="h-16 w-16 text-white" />
+                  </div>
+                </div>
               </div>
-            </div>
-            
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6">
-              AI Mock Interview Assistant
-            </h1>
-            
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              Practice interviews with confidence using local AI technology. 
-              Get personalized questions, real-time feedback, and improve your interview skills 
-              - all while keeping your data completely private.
-            </p>
+              
+              <h1 className="text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
+                AI Mock Interview
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent block">
+                  Assistant
+                </span>
+              </h1>
+              
+              <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-3xl mx-auto">
+                Master your interview skills with our advanced AI-powered platform. 
+                Get personalized questions, real-time feedback, and comprehensive performance analysis 
+                — all while maintaining complete privacy with local processing.
+              </p>
 
-            <div className="flex flex-wrap justify-center gap-4 mb-8">
-              {technologies.map((tech, index) => (
-                <Badge key={index} className={tech.color}>
-                  {tech.name}
-                </Badge>
-              ))}
-            </div>
+              <div className="flex flex-wrap justify-center gap-3 mb-10">
+                {technologies.map((tech, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <Badge className={`${tech.color} px-4 py-2 text-sm font-medium`}>
+                      {tech.name}
+                    </Badge>
+                  </motion.div>
+                ))}
+              </div>
 
-            <div className="flex justify-center gap-4">
-              <Link to="/signin">
-                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 text-lg">
-                  Start Practicing
-                  <ArrowRight className="ml-2 h-5 w-5" />
+              <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <Link to="/signin">
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-10 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+                    Start Your Journey
+                    <ArrowRight className="ml-3 h-5 w-5" />
+                  </Button>
+                </Link>
+                <Button 
+                  variant="outline" 
+                  className="border-2 border-gray-300 hover:border-blue-600 px-10 py-4 text-lg font-semibold rounded-xl transition-all duration-300"
+                >
+                  <Github className="mr-3 h-5 w-5" />
+                  View Source Code
                 </Button>
-              </Link>
-              <Button variant="outline" className="px-8 py-3 text-lg">
-                <Github className="mr-2 h-5 w-5" />
-                View Source
-              </Button>
-            </div>
-          </motion.div>
+              </div>
+            </motion.div>
+          </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Stats Section */}
-      <section className="py-16 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <section className="py-20 px-4 bg-white">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Platform Highlights
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Built with cutting-edge technology for the best interview practice experience
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <Card className="text-center p-6 hover:shadow-lg transition-shadow">
-                  <div className="flex justify-center mb-3 text-blue-600">
-                    {stat.icon}
+                <Card className="text-center p-8 hover:shadow-xl hover:-translate-y-2 transition-all duration-300 border-0 bg-gradient-to-br from-blue-50 to-indigo-50">
+                  <div className="flex justify-center mb-4">
+                    <div className="p-3 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600">
+                      <div className="text-white">{stat.icon}</div>
+                    </div>
                   </div>
-                  <div className="text-2xl font-bold text-gray-800 mb-1">
+                  <div className="text-2xl font-bold text-gray-900 mb-2">
                     {stat.value}
                   </div>
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm font-medium text-gray-600">
                     {stat.label}
                   </div>
                 </Card>
@@ -153,7 +188,7 @@ export const About = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-16 px-4">
+      <section id="features" className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-800 mb-4">
@@ -192,7 +227,7 @@ export const About = () => {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-16 px-4 bg-white">
+      <section id="how-it-works" className="py-16 px-4 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-800 mb-4">
@@ -256,7 +291,7 @@ export const About = () => {
       </section>
 
       {/* Privacy & Security Section */}
-      <section className="py-16 px-4">
+      <section id="privacy" className="py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -292,29 +327,141 @@ export const About = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-16 px-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-        <div className="max-w-4xl mx-auto text-center">
+      {/* Mission Section */}
+      <section className="py-20 px-4 bg-gradient-to-br from-gray-50 to-blue-50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">
+              Our Mission
+            </h2>
+            <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
+              We believe that everyone deserves the opportunity to succeed in their career journey. 
+              Our AI-powered interview platform democratizes access to professional interview preparation, 
+              making it possible for anyone to practice, improve, and gain confidence — all while 
+              maintaining complete privacy and data security.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <Card className="text-center p-8 h-full border-0 bg-white shadow-lg hover:shadow-xl transition-shadow">
+                <div className="flex justify-center mb-6">
+                  <div className="p-4 rounded-full bg-gradient-to-r from-green-500 to-emerald-600">
+                    <Target className="h-8 w-8 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Accessibility</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Making professional interview preparation accessible to everyone, 
+                  regardless of location, budget, or background.
+                </p>
+              </Card>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <Card className="text-center p-8 h-full border-0 bg-white shadow-lg hover:shadow-xl transition-shadow">
+                <div className="flex justify-center mb-6">
+                  <div className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600">
+                    <Lock className="h-8 w-8 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Privacy</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Your personal information and interview practice sessions remain completely 
+                  private with our local AI processing technology.
+                </p>
+              </Card>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+            >
+              <Card className="text-center p-8 h-full border-0 bg-white shadow-lg hover:shadow-xl transition-shadow">
+                <div className="flex justify-center mb-6">
+                  <div className="p-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-600">
+                    <TrendingUp className="h-8 w-8 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Excellence</h3>
+                <p className="text-gray-600 leading-relaxed">
+                  Continuous improvement and innovation in AI technology to provide 
+                  the most effective interview preparation experience.
+                </p>
+              </Card>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section
+      <section className="py-20 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="relative max-w-5xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <h2 className="text-4xl font-bold mb-4">
-              Ready to Ace Your Next Interview?
+            <div className="mb-8">
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-6 py-3 text-sm font-medium">
+                <Sparkles className="h-4 w-4" />
+                Join the Future of Interview Preparation
+              </div>
+            </div>
+            
+            <h2 className="text-5xl font-bold mb-6 leading-tight">
+              Ready to Transform Your 
+              <span className="block">Interview Performance?</span>
             </h2>
-            <p className="text-xl mb-8 opacity-90">
-              Join thousands of professionals who have improved their interview skills with our AI-powered platform.
+            
+            <p className="text-xl mb-10 opacity-90 max-w-3xl mx-auto leading-relaxed">
+              Join thousands of professionals who have elevated their interview skills and 
+              landed their dream jobs with our AI-powered practice platform.
             </p>
-            <Link to="/signin">
-              <Button className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-4 text-lg font-semibold">
-                <Sparkles className="mr-2 h-5 w-5" />
-                Start Your Free Interview Practice
+            
+            <div className="flex flex-col sm:flex-row justify-center gap-6">
+              <Link to="/signin">
+                <Button className="bg-white text-blue-600 hover:bg-gray-100 px-10 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+                  <Sparkles className="mr-3 h-5 w-5" />
+                  Start Your Free Practice
+                </Button>
+              </Link>
+              <Button 
+                variant="outline" 
+                className="border-2 border-white/30 text-white hover:bg-white/10 px-10 py-4 text-lg font-semibold rounded-xl backdrop-blur-sm transition-all duration-300"
+              >
+                <Download className="mr-3 h-5 w-5" />
+                Learn More
               </Button>
-            </Link>
+            </div>
+            
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto">
+              <div className="text-center">
+                <div className="text-3xl font-bold mb-2">10K+</div>
+                <div className="text-white/80">Practice Sessions</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold mb-2">95%</div>
+                <div className="text-white/80">Success Rate</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold mb-2">100%</div>
+                <div className="text-white/80">Privacy Guaranteed</div>
+              </div>
+            </div>
           </motion.div>
         </div>
-      </section>
+      </section> */}
     </div>
   );
 };

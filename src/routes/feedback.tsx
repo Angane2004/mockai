@@ -89,7 +89,7 @@ export const Feedback = () => {
           {/* Header Section with Trophy Animation */}
           <div className="text-center space-y-4">
             <div className="flex justify-center mb-6">
-              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 rounded-full animate-bounce">
+              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 rounded-full">
                 <TrendingUp className="h-16 w-16 text-white" />
               </div>
             </div>

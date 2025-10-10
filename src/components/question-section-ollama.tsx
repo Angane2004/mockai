@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { TooltipButton } from "./tooltip-button";
@@ -15,7 +15,8 @@ import { db } from "@/config/firebase.config";
 import { useAuth } from "@clerk/clerk-react";
 import { Loader2 } from "lucide-react";
 import { ReportLoading } from "@/components/report-loading";
-import { InterviewRecorder } from "@/components/interview-recorder";
+import { ContainerRecorder } from "@/components/container-recorder";
+import { useAntiCheating } from "@/hooks/useAntiCheating";
 
 // Helper functions for speech
 const speak = (text: string) => {
@@ -181,14 +182,129 @@ interface QuestionSectionProps {
   duration?: number; // in minutes
 }
 
-export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, duration = 30 }: QuestionSectionProps) => {
-  // Start recording when component mounts
+export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, duration = 0.5 }: QuestionSectionProps) => {
+  // Anti-cheating monitoring with proper warnings
+  const {
+    violations,
+    isMonitoring,
+    startMonitoring,
+    stopMonitoring,
+    getTotalViolations,
+    getViolationSummary,
+    resetViolations
+  } = useAntiCheating({
+    maxViolations: 2, // Warning at 1, terminate at 2
+    enableWarnings: true,
+    strictMode: false, // Balanced approach
+    onViolation: (type, details) => {
+      console.log('🚨 Anti-cheating violation detected:', { type, details, totalViolations: details.totalViolations });
+      
+      // Check the total violations from the details passed by the hook
+      if (details.totalViolations === 1) {
+        // First violation - show warning
+        toast.warning('⚠️ Tab Switch Detected!', {
+          description: 'Please stay on this tab. One more violation will end your interview session.',
+          duration: 8000,
+          id: 'tab-warning'
+        });
+      } else if (details.totalViolations >= 2) {
+        // Final warning before termination
+        toast.error('🚨 Final Warning!', {
+          description: 'Multiple tab switches detected. Interview will end shortly.',
+          duration: 5000,
+          id: 'final-warning'
+        });
+      }
+    },
+    onMaxViolationsReached: () => {
+      console.error('🚨 Maximum violations reached, ending interview');
+      toast.error('❌ Interview Session Ended', {
+        description: 'Multiple tab switches detected. Your interview has been terminated for security reasons.',
+        duration: 10000,
+        id: 'session-ended'
+      });
+      
+      // Force end the interview after a short delay
+      setTimeout(() => {
+        generateAndSaveReport();
+      }, 3000);
+    }
+  });
+
+  // Start interview with anti-cheating and recording (only once)
   useEffect(() => {
-    setIsInterviewRecording(true);
+    // Prevent multiple initializations using ref instead of state to avoid re-renders
+    if (initializationStarted.current) {
+      console.log('⚠️ Interview already initialized, skipping...');
+      return;
+    }
+    
+    console.log('🎯 Starting interview session (one-time initialization)...');
+    initializationStarted.current = true;
+    
+    // Start anti-cheating monitoring immediately
+    startMonitoring();
+    
+    // Small delay to ensure component is fully mounted and ask for permissions
+    const startTimer = setTimeout(async () => {
+      console.log('🎥 Requesting camera/microphone permissions...');
+      setIsRequestingPermissions(true);
+      
+      try {
+        // Request permissions first before starting recording
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            width: { ideal: 1280 }, 
+            height: { ideal: 720 },
+            frameRate: { ideal: 30 }
+          },
+          audio: { 
+            echoCancellation: true, 
+            noiseSuppression: true,
+            sampleRate: 44100
+          }
+        });
+        
+        // Stop the test stream immediately (we just needed permission)
+        stream.getTracks().forEach(track => {
+          console.log(`Stopping test ${track.kind} track:`, track.label);
+          track.stop();
+        });
+        
+        // Now start the actual recording immediately
+        console.log('✅ Permissions granted! Auto-starting interview recording...');
+        setIsRequestingPermissions(false);
+        setIsInterviewRecording(true);
+        
+        // Show success toast only once
+        toast.success('Interview session started!', {
+          description: 'Recording started automatically. Anti-cheating monitoring active.',
+          id: 'session-started' // Prevent duplicates
+        });
+        
+      } catch (error) {
+        console.error('❌ Permission denied or error:', error);
+        setIsRequestingPermissions(false);
+        
+        // Show warning toast only once
+        toast.warning('Limited interview mode', {
+          description: 'Camera/microphone access denied. Interview will continue without recording.',
+          id: 'permissions-denied' // Prevent duplicates
+        });
+        
+        // Still continue the interview even without recording
+        setIsInterviewRecording(false);
+      }
+    }, 1500); // Slightly longer delay to avoid race conditions
+    
     return () => {
+      console.log('🧹 Cleaning up interview session...');
+      clearTimeout(startTimer);
+      stopMonitoring();
       setIsInterviewRecording(false);
     };
-  }, []);
+  }, []); // Empty dependency array to run only once
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentSpeech, setCurrentSpeech] = useState<SpeechSynthesisUtterance | null>(null);
   const [isWebcamEnabled, setIsWebcamEnabled] = useState(false);
@@ -200,53 +316,187 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<string[]>([]);
   const [audioConfidenceScores, setAudioConfidenceScores] = useState<number[]>([]);
+  const [voiceToneAnalysis, setVoiceToneAnalysis] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [reportProgress, setReportProgress] = useState(0);
   const [reportStep, setReportStep] = useState('analyzing');
   const [isInterviewRecording, setIsInterviewRecording] = useState(false);
+  const [isRequestingPermissions, setIsRequestingPermissions] = useState(false);
   const [sessionRecording, setSessionRecording] = useState<Blob | null>(null);
   const navigate = useNavigate();
   const { userId } = useAuth();
   const { interviewId } = useParams();
+  
+  // Prevent multiple initializations with a ref
+  const initializationStarted = useRef(false);
 
-  // Recording handlers
+  // Anti-cheating monitoring (temporarily disabled)
+  // const {
+  //   violations,
+  //   isMonitoring,
+  //   startMonitoring,
+  //   stopMonitoring,
+  //   getTotalViolations,
+  //   getViolationSummary
+  // } = useAntiCheating({
+  //   maxViolations: 5,
+  //   enableWarnings: true,
+  //   strictMode: true,
+  //   onViolation: (type, details) => {
+  //     // Log violation to database for review
+  //     console.log('Anti-cheating violation:', type, details);
+  //   }
+  // });
+
+  // Recording handlers with better error handling
   const handleRecordingStart = (stream: MediaStream) => {
-    console.log('Interview recording started');
+    console.log('🔴 Interview recording started successfully!', {
+      streamId: stream.id,
+      videoTracks: stream.getVideoTracks().length,
+      audioTracks: stream.getAudioTracks().length,
+      interviewId,
+      userId
+    });
+    
+    // Show recording status update (only once)
+    toast.success('Recording in progress', {
+      description: 'Interview recording has started successfully',
+      id: 'recording-started' // Prevent duplicates
+    });
   };
 
   const handleRecordingStop = () => {
-    console.log('Interview recording stopped');
+    console.log('⏹️ Interview recording stopped');
+    toast.info('Recording stopped', {
+      description: 'Processing your interview recording...',
+      id: 'recording-stopped'
+    });
+  };
+  
+  // Manual recording start if auto-start fails
+  const handleManualRecordingStart = () => {
+    if (!isInterviewRecording) {
+      console.log('📹 Starting recording manually...');
+      setIsInterviewRecording(true);
+      toast.success('Starting recording now!', {
+        description: 'Interview recording is being initialized...',
+        id: 'manual-recording-start'
+      });
+    } else {
+      console.log('⚠️ Recording already in progress');
+      toast.warning('Recording already active', {
+        description: 'Interview recording is already in progress.',
+        id: 'already-recording'
+      });
+    }
   };
 
   const handleRecordingReady = async (recordingBlob: Blob) => {
+    console.log('📹 Recording ready! Processing...', {
+      size: recordingBlob.size,
+      type: recordingBlob.type,
+      interviewId,
+      userId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Validate recording blob
+    if (!recordingBlob || recordingBlob.size === 0) {
+      console.error('❌ Invalid recording blob received:', recordingBlob);
+      toast.error('Recording error', {
+        description: 'Recording is empty or invalid. Please try again.'
+      });
+      return;
+    }
+    
+    if (recordingBlob.size < 1024) { // Less than 1KB is probably not a valid recording
+      console.error('⚠️ Recording too small:', recordingBlob.size, 'bytes');
+      toast.warning('Recording seems incomplete', {
+        description: 'Recording file is very small. It may not contain valid video data.'
+      });
+    }
+    
     setSessionRecording(recordingBlob);
     
-    // Save recording to Firebase or local storage for later access
+    // Save recording to local storage (IndexedDB) - much better for video files
     try {
-      // Convert blob to base64 for storage
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64data = reader.result as string;
-        
-        // Save to Firebase with interview report
-        await addDoc(collection(db, "interviewRecordings"), {
-          interviewId,
-          userId,
-          recordingData: base64data,
-          recordingSize: recordingBlob.size,
-          recordingType: recordingBlob.type,
-          createdAt: serverTimestamp(),
-        });
-        
-        toast.success('Session recorded successfully!', {
-          description: 'Your interview recording is saved and can be viewed later.'
-        });
+      console.log('📦 Importing local recording storage service...');
+      const { localRecordingStorage } = await import('@/services/local-recording-storage');
+      
+      console.log('💾 Saving recording to local storage...', {
+        blobSize: recordingBlob.size,
+        blobType: recordingBlob.type,
+        userIdPresent: !!userId,
+        interviewIdPresent: !!interviewId
+      });
+      
+      // Calculate approximate duration based on file size (rough estimate)
+      const estimatedDuration = Math.max(5, Math.round(recordingBlob.size / (1024 * 100))); // More realistic estimate
+      
+      const recordingMetadata = {
+        interviewId: interviewId || `local_${Date.now()}`,
+        userId: userId || 'anonymous_user',
+        duration: estimatedDuration,
+        interviewName: `Interview ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+        interviewType: interviewType || 'General Interview',
+        depthLevel: depthLevel || 'Standard',
+        recordingType: recordingBlob.type || 'video/webm'
       };
-      reader.readAsDataURL(recordingBlob);
+      
+      console.log('📝 Recording metadata prepared:', recordingMetadata);
+      
+      const recordingId = await localRecordingStorage.saveRecording(recordingBlob, recordingMetadata);
+      
+      console.log('✅ Recording saved successfully to IndexedDB!', {
+        recordingId,
+        shortId: recordingId.slice(-8),
+        storageType: 'IndexedDB',
+        size: recordingBlob.size,
+        formattedSize: `${(recordingBlob.size / (1024 * 1024)).toFixed(2)} MB`,
+        userId,
+        interviewId
+      });
+      
+      // Immediate verification - try to retrieve the recording
+      console.log('🔍 Verifying save by retrieving recordings...');
+      const testRetrieve = await localRecordingStorage.getUserRecordings(userId || 'anonymous_user');
+      const justSaved = testRetrieve.find(r => r.id === recordingId);
+      
+      console.log('🔍 Verification results:', {
+        totalRecordings: testRetrieve.length,
+        justSavedFound: !!justSaved,
+        justSavedSize: justSaved?.recordingSize,
+        allRecordingIds: testRetrieve.map(r => ({ id: r.id.slice(-8), size: r.recordingSize }))
+      });
+      
+      if (justSaved) {
+        toast.success('Recording saved successfully! 🎉', {
+          description: `Interview recording (${(recordingBlob.size / (1024 * 1024)).toFixed(1)} MB) is now available in your Recorded Sessions.`,
+          duration: 5000
+        });
+      } else {
+        throw new Error('Recording was not found after save - verification failed');
+      }
+      
+      // Get updated storage stats
+      const stats = await localRecordingStorage.getStorageStats();
+      console.log('📊 Updated storage statistics:', {
+        totalRecordings: stats.totalRecordings,
+        totalSize: `${(stats.totalSize / (1024 * 1024)).toFixed(2)} MB`,
+        availableSpace: stats.availableSpace ? `${(stats.availableSpace / (1024 * 1024)).toFixed(2)} MB` : 'Unknown'
+      });
+      
     } catch (error) {
-      console.error('Error saving recording:', error);
-      toast.error('Failed to save recording', {
-        description: 'Recording could not be saved, but feedback will still be generated.'
+      console.error('❌ Error saving recording to local storage:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        recordingSize: recordingBlob.size,
+        recordingType: recordingBlob.type
+      });
+      
+      toast.error('Failed to save recording locally', {
+        description: `Error: ${error instanceof Error ? error.message : 'Unknown error'}. The interview feedback will still be generated.`,
+        duration: 6000
       });
     }
   };
@@ -299,14 +549,33 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
           setIsRecording(false);
           setInterimAnswer(""); // Clear interim when stopping
           
-          // Calculate confidence when recording stops
+          // Calculate confidence and voice tone analysis
           const recordingDuration = (Date.now() - recordingStartTime) / 1000;
-          const confidenceScore = analyzeAudioConfidence(userAnswer + interimAnswer, recordingDuration);
+          const finalAnswer = userAnswer + (interimAnswer || '');
+          
+          // Basic audio confidence
+          const confidenceScore = analyzeAudioConfidence(finalAnswer, recordingDuration);
           setAudioConfidenceScores(prev => {
             const newScores = [...prev];
             newScores[currentQuestionIndex] = confidenceScore;
             return newScores;
           });
+          
+          // Advanced voice tone analysis
+          const wordsPerSecond = finalAnswer.split(' ').length / Math.max(recordingDuration, 1);
+          const toneAnalysis = ollamaService.analyzeVoiceTone(finalAnswer, {
+            speakingRate: wordsPerSecond * 60, // Convert to words per minute
+            pauseCount: (finalAnswer.match(/[.!?]/g) || []).length,
+            averagePauseLength: recordingDuration / Math.max((finalAnswer.match(/[.!?]/g) || []).length, 1)
+          });
+          
+          setVoiceToneAnalysis(prev => {
+            const newAnalysis = [...prev];
+            newAnalysis[currentQuestionIndex] = toneAnalysis;
+            return newAnalysis;
+          });
+          
+          console.log('Voice tone analysis:', toneAnalysis);
         }
       );
       setSpeechRecognition(recognition);
@@ -321,8 +590,17 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
   };
 
   const generateAndSaveReport = async () => {
-    // Stop recording when finishing interview
+    console.log('🔄 Starting report generation process...');
+    
+    // Stop recording automatically when finishing interview
+    console.log('📹 Auto-stopping recording before generating report...');
     setIsInterviewRecording(false);
+    
+    // Show recording stopped message
+    toast.info('Recording stopped', {
+      description: 'Processing your interview recording and generating feedback...',
+      id: 'recording-finished'
+    });
     
     setIsLoading(true);
     setReportProgress(0);
@@ -330,95 +608,72 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
     
     try {
       // Step 1: Health check
+      console.log('⚕️ Step 1: Checking Ollama health...');
       setReportProgress(10);
       const isHealthy = await ollamaService.checkHealth();
+      console.log('Health check result:', isHealthy);
+      
       if (!isHealthy) {
+        console.error('❌ Ollama health check failed');
         throw new Error("Ollama service is not available. Please make sure Ollama is running.");
       }
 
       // Step 2: Prepare data
+      console.log('📊 Step 2: Preparing interview data...');
       setReportProgress(20);
       setReportStep('evaluating');
       const allAnswers = questions.map((q, i) => ({
         question: q,
         userAnswer: userAnswers[i] || "",
-        confidenceLevel: audioConfidenceScores[i] || 5
+        confidenceLevel: audioConfidenceScores[i] || 5,
+        voiceTone: voiceToneAnalysis[i] || null
       }));
       
-      // Step 3: Generate optimized prompt
-      setReportProgress(30);
-      const prompt = `Analyze this ${interviewType} interview (${depthLevel} level):
-
-${allAnswers.map((a, i) => `${i+1}. Q: ${a.question}
-A: ${a.userAnswer}
-Confidence Level: ${a.confidenceLevel}/10
-
-`).join('')}
-
-Return JSON only:
-{
-  "overallRating": number (1-10),
-  "overallFeedback": string,
-  "overallConfidenceLevel": number (1-10),
-  "questionFeedbacks": [{
-    "question": string,
-    "userAnswer": string,
-    "rating": number (1-10),
-    "feedback": string,
-    "idealAnswer": string,
-    "confidenceLevel": number (1-10)
-  }]
-}`;
+      console.log('📝 Interview data prepared:', {
+        questionsCount: questions.length,
+        answersCount: userAnswers.length,
+        interviewType,
+        depthLevel,
+        firstAnswer: allAnswers[0]?.userAnswer?.substring(0, 50) + '...'
+      });
       
-      // Step 4: Generate report
+      // Step 3: Generate report using fast template-based method
+      console.log('🚀 Step 3: Generating report (skipping prompt generation for speed)...');
       setReportProgress(50);
       setReportStep('generating');
       
-      const response = await ollamaService.generateResponse(prompt, true); // Use fast mode
+      // Use the new fast report generation method with timeout
+      const reportPromise = ollamaService.generateFastReport(
+        allAnswers,
+        interviewType,
+        depthLevel
+      );
       
-      // Step 5: Parse response
-      setReportProgress(70);
-      setReportStep('finalizing');
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Report generation timed out after 30 seconds')), 30000)
+      );
       
-      let cleanResponse = response.trim();
-      cleanResponse = cleanResponse.replace(/```json\s*|\s*```/g, '');
-      cleanResponse = cleanResponse.replace(/```\s*|\s*```/g, '');
+      const report = await Promise.race([reportPromise, timeoutPromise]) as any;
+      console.log('✅ Report generated successfully:', {
+        overallRating: report.overallRating,
+        feedbackCount: report.questionFeedbacks?.length || 0,
+        overallFeedback: report.overallFeedback?.substring(0, 100) + '...'
+      });
       
-      const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        cleanResponse = jsonMatch[0];
-      }
-
       setReportProgress(80);
-      let report;
-      try {
-        report = JSON.parse(cleanResponse);
-      } catch (parseError) {
-        // Fallback if JSON parsing fails
-        const avgConfidence = audioConfidenceScores.length > 0 
-          ? Math.round(audioConfidenceScores.reduce((sum, score) => sum + score, 0) / audioConfidenceScores.length)
-          : 6;
-        
-        report = {
-          overallRating: 7,
-          overallFeedback: "Interview completed successfully. Detailed analysis could not be parsed, but your answers show good understanding of the topics discussed.",
-          overallConfidenceLevel: avgConfidence,
-          questionFeedbacks: allAnswers.map((qa, index) => ({
-            question: qa.question,
-            userAnswer: qa.userAnswer,
-            rating: 7,
-            feedback: "Good attempt at answering the question. Consider providing more specific examples and details.",
-            idealAnswer: "A comprehensive answer should address all aspects of the question with relevant examples and clear explanations.",
-            confidenceLevel: qa.confidenceLevel
-          }))
-        };
-        console.warn("Using fallback report due to JSON parsing error:", parseError);
-      }
 
       // Ensure the report has the correct structure
-      if (!report.overallRating) report.overallRating = 7;
-      if (!report.overallFeedback) report.overallFeedback = "Interview completed successfully.";
+      if (!report.overallRating) {
+        console.log('⚠️ Missing overall rating, setting default');
+        report.overallRating = 7;
+      }
+      if (!report.overallFeedback) {
+        console.log('⚠️ Missing overall feedback, setting default');
+        report.overallFeedback = "Interview completed successfully.";
+      }
       if (!Array.isArray(report.questionFeedbacks)) {
+        console.log('⚠️ Missing question feedbacks, generating defaults');
         report.questionFeedbacks = allAnswers.map((qa, index) => ({
           question: qa.question,
           userAnswer: qa.userAnswer,
@@ -428,34 +683,57 @@ Return JSON only:
         }));
       }
 
-      // Step 6: Save the report to Firebase
+      // Step 4: Save to Firebase
+      console.log('💾 Step 4: Saving report to Firebase...');
       setReportProgress(90);
-      const reportRef = await addDoc(collection(db, "interviewReports"), {
+      const violationSummary = getViolationSummary();
+      stopMonitoring();
+      
+      const reportData = {
         interviewId,
         userId,
         interviewName: `Interview Report`,
         interviewType,
         depthLevel,
         ...report,
+        antiCheatingData: violationSummary,
         createdAt: serverTimestamp(),
-        generatedBy: "Ollama Llama3"
+        generatedBy: "Ollama Llama3 (Template-based)"
+      };
+      
+      console.log('📤 Saving to Firebase with data:', {
+        interviewId,
+        userId,
+        overallRating: reportData.overallRating,
+        questionsCount: reportData.questionFeedbacks?.length
       });
+      
+      const reportRef = await addDoc(collection(db, "interviewReports"), reportData);
+      console.log('✅ Report saved to Firebase with ID:', reportRef.id);
       
       // Final step
       setReportProgress(100);
       
-      toast.success("Report Generated with Ollama!", { 
+      toast.success("Report Generated Successfully!", { 
         description: "Your AI-powered feedback is ready to view." 
       });
+      
+      console.log('🎉 Navigating to feedback page:', `/generate/feedback/${interviewId}`);
       navigate(`/generate/feedback/${interviewId}`);
 
     } catch (error) {
-      console.error("Error generating report:", error);
+      console.error('❌ Error in report generation:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        step: 'generateAndSaveReport'
+      });
+      
       toast.error("Failed to generate report", {
-        description: error instanceof Error ? error.message : "Please check if Ollama is running and try again."
+        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again."
       });
     } finally {
       setIsLoading(false);
+      console.log('🏁 Report generation process completed');
     }
   };
 
@@ -609,13 +887,94 @@ Return JSON only:
           autoStart={true}
         />
         
-        {/* Interview Recorder */}
-        <InterviewRecorder
+        {/* Anti-Cheating Status */}
+        {isMonitoring && (
+          <div className={`p-4 border rounded-lg ${
+            getTotalViolations() === 0 
+              ? 'bg-green-50 border-green-200' 
+              : getTotalViolations() === 1 
+              ? 'bg-yellow-50 border-yellow-200' 
+              : 'bg-red-50 border-red-200'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${
+                  getTotalViolations() === 0 ? 'bg-green-500' : 
+                  getTotalViolations() === 1 ? 'bg-yellow-500' : 'bg-red-500'
+                } animate-pulse`}></div>
+                <span className="font-medium text-sm">
+                  🛡️ Interview Security: {getTotalViolations() === 0 ? 'Active' : getTotalViolations() === 1 ? 'Warning Issued' : 'Final Warning'}
+                </span>
+              </div>
+              {getTotalViolations() > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-medium ${
+                    getTotalViolations() === 1 ? 'text-yellow-700' : 'text-red-700'
+                  }`}>
+                    {getTotalViolations() === 1 ? 'First Warning - Stay on this tab' : 'Final Warning - Next violation ends interview'}
+                  </span>
+                </div>
+              )}
+            </div>
+            {getTotalViolations() > 0 && (
+              <div className="text-xs mt-2">
+                {getTotalViolations() === 1 ? (
+                  <div className="text-yellow-700">
+                    ⚠️ Tab switch detected. Please remain on this page during the interview.
+                  </div>
+                ) : (
+                  <div className="text-red-700">
+                    🚨 Multiple tab switches detected. One more violation will automatically end your interview.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Container Recorder - Records only camera and answer areas */}
+        <ContainerRecorder
           isRecording={isInterviewRecording}
           onStartRecording={handleRecordingStart}
           onStopRecording={handleRecordingStop}
           onRecordingReady={handleRecordingReady}
         />
+        
+        {/* Permission Request Status */}
+        {isRequestingPermissions && (
+          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center gap-2 text-yellow-800">
+              <div className="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"></div>
+              <span className="font-medium">Requesting camera/microphone permissions...</span>
+            </div>
+            <p className="text-sm text-yellow-700 mt-1">
+              Please allow access to camera and microphone for interview recording.
+            </p>
+          </div>
+        )}
+        
+        {/* Manual recording option if auto-start fails */}
+        {!isRequestingPermissions && !isInterviewRecording && (
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-medium text-blue-800">📹 Recording Not Started</span>
+                <p className="text-sm text-blue-700 mt-1">
+                  Interview recording hasn't started automatically. You can continue without recording or start it manually.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleManualRecordingStart}
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Start Recording
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Webcam Container */}
         <div className="flex-1 flex flex-col items-center justify-center border p-4 bg-gray-50 rounded-md">

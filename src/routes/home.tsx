@@ -62,8 +62,8 @@ const HomePage = () => {
       </Container>
 
       {/* marquee section */}
-      <div className=" w-full my-10">
-        <Marquee pauseOnHover>
+      <div className=" w-full my-16">
+        {/* <Marquee pauseOnHover>
           <MarqueImg img="/assets/img/logo/firebase.png" />
           <MarqueImg img="/assets/img/logo/reactjs.png" />
           <MarqueImg img="/assets/img/logo/next.png" />
@@ -72,7 +72,7 @@ const HomePage = () => {
           <MarqueImg img="/assets/img/logo/microsoft.png" />
           <MarqueImg img="/assets/img/logo/gemini.png" />
           <MarqueImg img="/assets/img/logo/meet.png" />
-        </Marquee>
+        </Marquee> */}
       </div>
 
       <Container className="py-8 space-y-8">

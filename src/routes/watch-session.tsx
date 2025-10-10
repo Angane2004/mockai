@@ -4,23 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CustomBreadCrumb } from '@/components/custom-bread-crumb';
 import { 
-  Play, 
-  Pause, 
-  Square, 
-  Volume2, 
-  VolumeX, 
   Download,
-  ArrowLeft,
-  RotateCcw,
-  SkipForward,
-  SkipBack,
-  Maximize
+  ArrowLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { db } from '@/config/firebase.config';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@clerk/clerk-react';
 import { LoaderPage } from './loader-page';
+import { InterviewVideoViewer } from '@/components/interview-video-viewer';
 
 export const WatchSession = () => {
   const { interviewId } = useParams();
@@ -30,13 +22,6 @@ export const WatchSession = () => {
   const [recording, setRecording] = useState<any>(null);
   const [interview, setInterview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -45,15 +30,44 @@ export const WatchSession = () => {
       try {
         setLoading(true);
         
-        // Fetch interview details
-        const interviewDoc = await getDoc(doc(db, 'interviews', interviewId));
-        if (!interviewDoc.exists()) {
-          toast.error('Interview not found');
-          navigate('/');
-          return;
+        // Try to fetch interview details, but don't fail if not found
+        let interviewData = null;
+        try {
+          const interviewDoc = await getDoc(doc(db, 'interviews', interviewId));
+          if (interviewDoc.exists()) {
+            interviewData = { id: interviewDoc.id, ...interviewDoc.data() };
+          }
+        } catch (error) {
+          console.warn('Could not fetch interview details:', error);
+          // Try to get details from the report instead
+          const reportQuery = query(
+            collection(db, 'interviewReports'),
+            where('interviewId', '==', interviewId),
+            where('userId', '==', userId)
+          );
+          const reportSnapshot = await getDocs(reportQuery);
+          if (!reportSnapshot.empty) {
+            const reportData = reportSnapshot.docs[0].data();
+            interviewData = {
+              id: interviewId,
+              name: reportData.interviewName || 'Interview Recording',
+              interviewType: reportData.interviewType || 'Technical',
+              depthLevel: reportData.depthLevel || 'Intermediate',
+              duration: 30
+            };
+          }
         }
         
-        const interviewData = { id: interviewDoc.id, ...interviewDoc.data() };
+        if (!interviewData) {
+          interviewData = {
+            id: interviewId,
+            name: 'Interview Recording',
+            interviewType: 'Technical',
+            depthLevel: 'Intermediate',
+            duration: 30
+          };
+        }
+        
         setInterview(interviewData);
         
         // Fetch recording
@@ -74,25 +88,6 @@ export const WatchSession = () => {
         const recordingData = recordingSnapshot.docs[0].data();
         setRecording(recordingData);
         
-        // Create video blob URL from base64
-        if (recordingData.recordingData) {
-          const base64Data = recordingData.recordingData.split(',')[1];
-          const byteCharacters = atob(base64Data);
-          const byteNumbers = new Array(byteCharacters.length);
-          
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-          }
-          
-          const byteArray = new Uint8Array(byteNumbers);
-          const blob = new Blob([byteArray], { type: recordingData.recordingType || 'video/webm' });
-          const videoUrl = URL.createObjectURL(blob);
-          
-          if (videoRef.current) {
-            videoRef.current.src = videoUrl;
-          }
-        }
-        
       } catch (error) {
         console.error('Error fetching data:', error);
         toast.error('Failed to load interview recording');
@@ -104,64 +99,6 @@ export const WatchSession = () => {
     
     fetchData();
   }, [interviewId, userId, navigate]);
-
-  // Video event handlers
-  const handlePlay = () => {
-    if (videoRef.current) {
-      videoRef.current.play();
-      setIsPlaying(true);
-    }
-  };
-
-  const handlePause = () => {
-    if (videoRef.current) {
-      videoRef.current.pause();
-      setIsPlaying(false);
-    }
-  };
-
-  const handleStop = () => {
-    if (videoRef.current) {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
-      setIsPlaying(false);
-      setCurrentTime(0);
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      setDuration(videoRef.current.duration);
-    }
-  };
-
-  const handleSeek = (seconds: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = Math.max(0, Math.min(duration, currentTime + seconds));
-    }
-  };
-
-  const handleVolumeChange = (newVolume: number) => {
-    if (videoRef.current) {
-      videoRef.current.volume = newVolume;
-      setVolume(newVolume);
-      setIsMuted(newVolume === 0);
-    }
-  };
-
-  const toggleMute = () => {
-    if (videoRef.current) {
-      const newMutedState = !isMuted;
-      videoRef.current.muted = newMutedState;
-      setIsMuted(newMutedState);
-    }
-  };
 
   const handleDownload = () => {
     if (recording && recording.recordingData) {
@@ -178,21 +115,7 @@ export const WatchSession = () => {
     }
   };
 
-  const toggleFullscreen = () => {
-    if (videoRef.current) {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      } else {
-        videoRef.current.requestFullscreen();
-      }
-    }
-  };
-
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
+  // Utility functions removed - handled by InterviewVideoViewer component
 
   if (loading) {
     return <LoaderPage className="w-full h-[70vh]" />;
@@ -255,128 +178,19 @@ export const WatchSession = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Video Element */}
-          <div className="relative bg-black rounded-lg overflow-hidden">
-            <video
-              ref={videoRef}
-              className="w-full h-auto max-h-[500px] object-contain"
-              onTimeUpdate={handleTimeUpdate}
-              onLoadedMetadata={handleLoadedMetadata}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              poster="/assets/svg/video-placeholder.svg"
-            >
-              Your browser does not support video playback.
-            </video>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="w-full bg-gray-200 rounded-full h-2 relative">
-            <div
-              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-            />
-            <input
-              type="range"
-              min={0}
-              max={duration}
-              value={currentTime}
-              onChange={(e) => {
-                if (videoRef.current) {
-                  videoRef.current.currentTime = parseFloat(e.target.value);
-                }
-              }}
-              className="absolute inset-0 w-full h-2 opacity-0 cursor-pointer"
-            />
-          </div>
-
-          {/* Time Display */}
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
-
-          {/* Controls */}
-          <div className="flex items-center justify-center gap-4">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => handleSeek(-10)}
-              className="h-10 w-10"
-            >
-              <SkipBack className="w-4 h-4" />
-            </Button>
-
-            {isPlaying ? (
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handlePause}
-                className="h-12 w-12"
-              >
-                <Pause className="w-5 h-5" />
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handlePlay}
-                className="h-12 w-12"
-              >
-                <Play className="w-5 h-5 ml-1" />
-              </Button>
-            )}
-
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleStop}
-              className="h-10 w-10"
-            >
-              <Square className="w-4 h-4" />
-            </Button>
-
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => handleSeek(10)}
-              className="h-10 w-10"
-            >
-              <SkipForward className="w-4 h-4" />
-            </Button>
-
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={toggleMute}
-              className="h-10 w-10"
-            >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </Button>
-
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={toggleFullscreen}
-              className="h-10 w-10"
-            >
-              <Maximize className="w-4 h-4" />
-            </Button>
-          </div>
-
-          {/* Volume Control */}
-          <div className="flex items-center justify-center gap-2">
-            <Volume2 className="w-4 h-4 text-gray-500" />
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.1}
-              value={volume}
-              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-              className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-            />
-          </div>
+          {/* Enhanced Video Player */}
+          <InterviewVideoViewer 
+            recordingData={recording?.recordingData || ''}
+            recordingType={recording?.recordingType}
+            interviewTitle={interview?.name || 'Interview Recording'}
+            interviewDate={recording?.createdAt?.toDate()?.toISOString()}
+            onError={(error) => {
+              console.error('Video playback error:', error);
+              toast.error('Video playback error', {
+                description: error
+              });
+            }}
+          />
 
           {/* Recording Info */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg text-sm">

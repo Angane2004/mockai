@@ -96,7 +96,7 @@ export const CreateJobDescriptionInterview = () => {
 
       <div className="flex items-center justify-between">
         <Headings
-          title="Create Job-Based Interview 💼"
+          title="Create Job-Based Interview"
           description="Generate interview questions based on job requirements"
         />
         <Button
@@ -181,7 +181,7 @@ export const CreateJobDescriptionInterview = () => {
                 className="min-h-[120px] focus:ring-2 focus:ring-blue-500 transition-all resize-none"
               />
               <p className="text-sm text-gray-500">
-                💡 Tip: Include specific technologies, years of experience, and key responsibilities for better questions
+                Tip: Include specific technologies, years of experience, and key responsibilities for better questions
               </p>
             </div>
 
@@ -194,10 +194,10 @@ export const CreateJobDescriptionInterview = () => {
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Technical">🔧 Technical</SelectItem>
-                    <SelectItem value="Behavioral">🧠 Behavioral</SelectItem>
-                    <SelectItem value="System Design">🏗️ System Design</SelectItem>
-                    <SelectItem value="Mixed">🎯 Mixed Interview</SelectItem>
+                    <SelectItem value="Technical">Technical</SelectItem>
+                    <SelectItem value="Behavioral">Behavioral</SelectItem>
+                    <SelectItem value="System Design">System Design</SelectItem>
+                    <SelectItem value="Mixed">Mixed Interview</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -209,9 +209,9 @@ export const CreateJobDescriptionInterview = () => {
                     <SelectValue placeholder="Select level" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Fresher">🌱 Fresher (0-1 years)</SelectItem>
-                    <SelectItem value="Intermediate">🚀 Intermediate (2-4 years)</SelectItem>
-                    <SelectItem value="Experienced">⭐ Experienced (5+ years)</SelectItem>
+                    <SelectItem value="Fresher">Fresher (0-1 years)</SelectItem>
+                    <SelectItem value="Intermediate">Intermediate (2-4 years)</SelectItem>
+                    <SelectItem value="Experienced">Experienced (5+ years)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -246,11 +246,11 @@ export const CreateJobDescriptionInterview = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="15">15 minutes ⚡</SelectItem>
-                  <SelectItem value="30">30 minutes 📝</SelectItem>
-                  <SelectItem value="45">45 minutes 🎯</SelectItem>
-                  <SelectItem value="60">60 minutes 🔥</SelectItem>
-                  <SelectItem value="90">90 minutes 💪</SelectItem>
+                  <SelectItem value="15">15 minutes</SelectItem>
+                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="45">45 minutes</SelectItem>
+                  <SelectItem value="60">60 minutes</SelectItem>
+                  <SelectItem value="90">90 minutes</SelectItem>
                 </SelectContent>
               </Select>
             </div>

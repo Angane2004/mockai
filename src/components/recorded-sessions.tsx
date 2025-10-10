@@ -25,6 +25,7 @@ import { db } from '@/config/firebase.config';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
+import { InterviewVideoViewer } from './interview-video-viewer';
 
 interface RecordedSession {
   id: string;
@@ -34,6 +35,7 @@ interface RecordedSession {
   depthLevel?: string;
   recordingSize: number;
   recordingType: string;
+  recordingData?: string; // Base64 video data
   createdAt: any;
   duration?: number;
 }
@@ -41,37 +43,76 @@ interface RecordedSession {
 export const RecordedSessions: React.FC = () => {
   const [recordings, setRecordings] = useState<RecordedSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [previewRecording, setPreviewRecording] = useState<RecordedSession | null>(null);
   const { userId } = useAuth();
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      console.log('❌ No userId available, skipping recording fetch');
+      return;
+    }
 
+    console.log('🔄 Starting to fetch recordings for userId:', userId);
+    console.log('🔍 Database config:', db.app.name);
+    console.log('🔍 Collection path: interviewRecordings');
+    console.log('🔍 Query filter: userId ==', userId);
     setLoading(true);
-    const recordingsQuery = query(
-      collection(db, 'interviewRecordings'),
-      where('userId', '==', userId)
-    );
+    
+    try {
+      const recordingsQuery = query(
+        collection(db, 'interviewRecordings'),
+        where('userId', '==', userId)
+      );
+      console.log('⚙️ Query created, setting up listener...');
 
-    const unsubscribe = onSnapshot(
-      recordingsQuery,
+      const unsubscribe = onSnapshot(
+        recordingsQuery,
       async (snapshot) => {
+        console.log('🎥 Fetching recordings for userId:', userId);
+        console.log('📊 Found recordings docs:', snapshot.docs.length);
+        
+        if (snapshot.docs.length === 0) {
+          console.log('❌ No recordings found in database');
+          setRecordings([]);
+          setLoading(false);
+          return;
+        }
+        
         const recordingsList: RecordedSession[] = await Promise.all(
-          snapshot.docs.map(async (doc) => {
+          snapshot.docs.map(async (doc, index) => {
             const recordingData = { id: doc.id, ...doc.data() };
+            console.log(`🔍 Processing recording ${index + 1}:`, {
+              id: recordingData.id,
+              interviewId: recordingData.interviewId,
+              size: recordingData.recordingSize,
+              type: recordingData.recordingType,
+              hasData: !!recordingData.recordingData,
+              created: recordingData.createdAt
+            });
             
-            // Fetch interview details to get name and type
+            // Set default values and try to fetch additional interview details
+            recordingData.interviewName = recordingData.interviewName || `Interview ${recordingData.interviewId.slice(-8)}`;
+            recordingData.interviewType = recordingData.interviewType || 'Interview';
+            recordingData.depthLevel = recordingData.depthLevel || 'Standard';
+            
+            // Try to fetch additional interview details from reports
             try {
-              const interviewDocRef = doc(db, 'interviews', recordingData.interviewId);
-              const interviewDoc = await getDoc(interviewDocRef);
+              const reportsQuery = query(
+                collection(db, 'interviewReports'),
+                where('interviewId', '==', recordingData.interviewId),
+                where('userId', '==', userId)
+              );
               
-              if (interviewDoc.exists()) {
-                const interviewData = interviewDoc.data();
-                recordingData.interviewName = interviewData.name;
-                recordingData.interviewType = interviewData.interviewType;
-                recordingData.depthLevel = interviewData.depthLevel;
+              const reportDocs = await getDocs(reportsQuery);
+              if (!reportDocs.empty) {
+                const reportData = reportDocs.docs[0].data();
+                recordingData.interviewName = reportData.interviewName || recordingData.interviewName;
+                recordingData.interviewType = reportData.interviewType || recordingData.interviewType;
+                recordingData.depthLevel = reportData.depthLevel || recordingData.depthLevel;
               }
             } catch (error) {
-              console.warn('Could not fetch interview details for recording:', error);
+              console.warn('Could not fetch interview report details:', error);
             }
 
             return recordingData as RecordedSession;
@@ -94,10 +135,53 @@ export const RecordedSessions: React.FC = () => {
         });
         setLoading(false);
       }
-    );
+      );
 
-    return () => unsubscribe();
+      return () => unsubscribe();
+    } catch (error) {
+      console.error('❌ Error setting up recordings listener:', error);
+      setLoading(false);
+      toast.error('Error loading recordings', {
+        description: 'Could not connect to the database. Please try refreshing the page.'
+      });
+    }
   }, [userId]);
+
+  const handleManualRefresh = async () => {
+    if (!userId) return;
+    
+    setRefreshing(true);
+    console.log('🔄 Manual refresh triggered');
+    
+    try {
+      // Force a fresh query
+      const recordingsQuery = query(
+        collection(db, 'interviewRecordings'),
+        where('userId', '==', userId)
+      );
+      
+      const snapshot = await getDocs(recordingsQuery);
+      console.log('📊 Manual refresh found', snapshot.docs.length, 'recordings');
+      
+      const recordingsList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setRecordings(recordingsList);
+      
+      toast.success(`Found ${recordingsList.length} recordings`, {
+        description: 'Recording list has been refreshed'
+      });
+    } catch (error) {
+      console.error('❌ Manual refresh failed:', error);
+      toast.error('Refresh failed', {
+        description: 'Could not refresh recordings list'
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleDeleteRecording = async (recordingId: string, interviewName: string) => {
     try {
@@ -141,7 +225,7 @@ export const RecordedSessions: React.FC = () => {
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-semibold text-gray-800">📹 Recorded Sessions</h2>
+            <h2 className="text-xl font-semibold text-gray-800">Recorded Sessions</h2>
             <p className="text-gray-600 text-sm mt-1">Your interview recording library</p>
           </div>
         </div>
@@ -160,7 +244,7 @@ export const RecordedSessions: React.FC = () => {
       <div>
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-semibold text-gray-800">📹 Recorded Sessions</h2>
+            <h2 className="text-xl font-semibold text-gray-800">Recorded Sessions</h2>
             <p className="text-gray-600 text-sm mt-1">Your interview recording library</p>
           </div>
         </div>
@@ -190,6 +274,52 @@ export const RecordedSessions: React.FC = () => {
             {recordings.length} recording{recordings.length !== 1 ? 's' : ''} • 
             Total size: {formatFileSize(recordings.reduce((total, r) => total + (r.recordingSize || 0), 0))}
           </p>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleManualRefresh}
+            disabled={refreshing}
+            variant="outline"
+            size="sm"
+          >
+            {refreshing ? 'Refreshing...' : '🔄 Refresh'}
+          </Button>
+          <Button 
+            onClick={async () => {
+              if (!userId) return;
+              console.log('🔍 Debug: Checking Firebase directly...');
+              try {
+                const recordingsQuery = query(
+                  collection(db, 'interviewRecordings'),
+                  where('userId', '==', userId)
+                );
+                const snapshot = await getDocs(recordingsQuery);
+                console.log('🔍 Raw Firebase data:', {
+                  totalDocs: snapshot.docs.length,
+                  docs: snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    data: doc.data(),
+                    exists: doc.exists()
+                  }))
+                });
+                
+                // Also check all recordings without userId filter
+                const allRecordingsQuery = collection(db, 'interviewRecordings');
+                const allSnapshot = await getDocs(allRecordingsQuery);
+                console.log('🔍 All recordings in database:', {
+                  totalDocs: allSnapshot.docs.length,
+                  userIds: allSnapshot.docs.map(doc => doc.data().userId),
+                  currentUserId: userId
+                });
+              } catch (error) {
+                console.error('❌ Debug check failed:', error);
+              }
+            }}
+            variant="outline"
+            size="sm"
+          >
+            🔍 Debug
+          </Button>
         </div>
       </div>
 
@@ -271,15 +401,14 @@ export const RecordedSessions: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="flex gap-2 pt-2">
-                <Link 
-                  to={`/generate/watch-session/${recording.interviewId}`}
+                <Button 
+                  size="sm" 
                   className="flex-1"
+                  onClick={() => setPreviewRecording(recording)}
                 >
-                  <Button size="sm" className="w-full">
-                    <Play className="h-4 w-4 mr-2" />
-                    Watch Session
-                  </Button>
-                </Link>
+                  <Play className="h-4 w-4 mr-2" />
+                  Preview
+                </Button>
                 <Link 
                   to={`/generate/feedback/${recording.interviewId}`}
                 >
@@ -296,8 +425,61 @@ export const RecordedSessions: React.FC = () => {
       {recordings.length > 0 && (
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-500">
-            💡 Tip: Click "Watch Session" to view recordings with full video controls and download options
+            💡 Tip: Click "Preview" to quickly view recordings or "View Report" for detailed feedback
           </p>
+        </div>
+      )}
+      
+      {/* Video Preview Modal */}
+      {previewRecording && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">
+                  {previewRecording.interviewName || 'Interview Recording'}
+                </h3>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setPreviewRecording(null)}
+                >
+                  ✕ Close
+                </Button>
+              </div>
+              
+              <InterviewVideoViewer 
+                recordingData={previewRecording.recordingData || ''}
+                recordingType={previewRecording.recordingType}
+                interviewTitle={previewRecording.interviewName || 'Interview Recording'}
+                interviewDate={previewRecording.createdAt?.toDate()?.toISOString()}
+                onError={(error) => {
+                  console.error('Video preview error:', error);
+                  toast.error('Video playback error', {
+                    description: error
+                  });
+                }}
+              />
+              
+              <div className="mt-4 flex gap-2">
+                <Link 
+                  to={`/generate/watch-session/${previewRecording.interviewId}`}
+                  className="flex-1"
+                >
+                  <Button className="w-full">
+                    Open Full Session
+                  </Button>
+                </Link>
+                <Link 
+                  to={`/generate/feedback/${previewRecording.interviewId}`}
+                >
+                  <Button variant="outline">
+                    View Report
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

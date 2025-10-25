@@ -776,7 +776,7 @@ Example format:
       
       // Context relevance bonus (if answer relates to the question)
       const questionWords = qa.question.toLowerCase().match(/\b\w+\b/g) || [];
-      const answerWords = answer.match(/\b\w+\b/g) || [];
+      const answerWords: string[] = answer.match(/\b\w+\b/g) || [];
       const relevantWords = questionWords.filter(qWord => 
         qWord.length > 3 && answerWords.includes(qWord)
       ).length;

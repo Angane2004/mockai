@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, AlertCircle, CheckCircle, Chrome, Firefox, Edge } from "lucide-react";
+import { Mic, MicOff, AlertCircle, CheckCircle, Chrome } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface MicrophonePermissionModalProps {
@@ -28,7 +28,7 @@ export const MicrophonePermissionModal = ({ isOpen, onClose, onRetry }: Micropho
 
   const firefoxSteps = [
     {
-      icon: <Firefox className="h-5 w-5 text-orange-500" />,
+      icon: <Chrome className="h-5 w-5 text-orange-500" />,
       title: "Firefox Instructions", 
       steps: [
         "1. Look for the microphone icon 🎤 in your browser's address bar",
@@ -94,7 +94,7 @@ export const MicrophonePermissionModal = ({ isOpen, onClose, onRetry }: Micropho
             <Card className="p-3 bg-orange-50 border-orange-200">
               <CardContent className="p-0">
                 <div className="flex items-start gap-3">
-                  <Firefox className="h-5 w-5 text-orange-500 mt-0.5" />
+                  <Chrome className="h-5 w-5 text-orange-500 mt-0.5" />
                   <div className="space-y-1">
                     <p className="font-medium text-sm">Firefox</p>
                     <ul className="text-xs text-gray-600 space-y-1">

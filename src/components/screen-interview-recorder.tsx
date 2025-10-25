@@ -124,11 +124,10 @@ export const ScreenInterviewRecorder: React.FC<ScreenInterviewRecorderProps> = (
         // Try to get screen with system audio
         screenCapture = await navigator.mediaDevices.getDisplayMedia({
           video: {
-            mediaSource: 'screen',
             width: { ideal: 1920 },
             height: { ideal: 1080 },
             frameRate: { ideal: 30 }
-          },
+          } as MediaTrackConstraints,
           audio: {
             echoCancellation: true,
             noiseSuppression: true,
@@ -141,11 +140,10 @@ export const ScreenInterviewRecorder: React.FC<ScreenInterviewRecorderProps> = (
         // Fallback to video-only screen capture
         screenCapture = await navigator.mediaDevices.getDisplayMedia({
           video: {
-            mediaSource: 'screen',
             width: { ideal: 1920 },
             height: { ideal: 1080 },
             frameRate: { ideal: 30 }
-          },
+          } as MediaTrackConstraints,
           audio: false
         });
         console.log('✅ Screen capture (video only) granted');
@@ -479,7 +477,7 @@ export const ScreenInterviewRecorder: React.FC<ScreenInterviewRecorderProps> = (
         console.log('🔍 Available stream tracks:', stream.getTracks().map(t => `${t.kind}:${t.label}`));
 
         // Create MediaRecorder with extensive fallback options
-        let recorder: MediaRecorder;
+        let recorder: MediaRecorder | null = null;
         
         console.log('🎬 Attempting to create MediaRecorder...');
         console.log('- Stream tracks:', stream.getTracks().map(t => `${t.kind}:${t.readyState}:${t.label}`));
@@ -530,6 +528,10 @@ export const ScreenInterviewRecorder: React.FC<ScreenInterviewRecorderProps> = (
               throw new Error(`MediaRecorder creation failed: ${lastError.message}`);
             }
           }
+        }
+
+        if (!recorder) {
+          throw new Error('Failed to create MediaRecorder');
         }
 
         const chunks: Blob[] = [];

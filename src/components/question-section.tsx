@@ -197,6 +197,9 @@ export const QuestionSection = ({ questions, interviewType, depthLevel }: Questi
         (text) => {
           setUserAnswer(prev => prev + ' ' + text);
         },
+        (text) => {
+          // Interim result handler
+        },
         () => {
           setIsRecording(false);
         }

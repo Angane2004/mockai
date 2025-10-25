@@ -33,11 +33,11 @@ export const DebugRecordings = () => {
       const allRecordingsList = allRecordingsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })) as any[];
       setAllRecordings(allRecordingsList);
       
       // Get all unique user IDs
-      const uniqueUserIds = [...new Set(allRecordingsList.map(r => r.userId))];
+      const uniqueUserIds = [...new Set(allRecordingsList.map((r: any) => r.userId))];
       setAllUsers(uniqueUserIds);
       
       console.log('📊 ALL RECORDINGS SUMMARY:');
@@ -57,12 +57,12 @@ export const DebugRecordings = () => {
       const recordingsList = recordingsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })) as any[];
       setRecordings(recordingsList);
       
       console.log('🎥 USER RECORDINGS SUMMARY:');
       console.log('- Found recordings for user:', recordingsList.length);
-      console.log('- Recording details:', recordingsList.map(r => ({
+      console.log('- Recording details:', recordingsList.map((r: any) => ({
         id: r.id,
         interviewId: r.interviewId,
         size: r.recordingSize,

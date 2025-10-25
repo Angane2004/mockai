@@ -81,7 +81,7 @@ export const RecordedSessions: React.FC = () => {
         
         const recordingsList: RecordedSession[] = await Promise.all(
           snapshot.docs.map(async (doc, index) => {
-            const recordingData = { id: doc.id, ...doc.data() };
+            const recordingData = { id: doc.id, ...doc.data() } as RecordedSession;
             console.log(`🔍 Processing recording ${index + 1}:`, {
               id: recordingData.id,
               interviewId: recordingData.interviewId,
@@ -166,7 +166,7 @@ export const RecordedSessions: React.FC = () => {
       const recordingsList = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })) as RecordedSession[];
       
       setRecordings(recordingsList);
       

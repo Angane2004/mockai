@@ -77,11 +77,10 @@ export const SimpleScreenRecorder: React.FC<SimpleScreenRecorderProps> = ({
       // Request screen capture with basic settings
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: {
-          mediaSource: 'screen' as MediaStreamConstraints['video'],
           width: { ideal: 1920, max: 1920 },
           height: { ideal: 1080, max: 1080 },
           frameRate: { ideal: 15, max: 30 } // Lower framerate for compatibility
-        },
+        } as MediaTrackConstraints,
         audio: false // Skip audio to avoid complications
       });
 

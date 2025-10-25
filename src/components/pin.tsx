@@ -47,8 +47,42 @@ export const InterviewPin = ({ interview, onMockPage }: InterviewPinProps) => {
   const handleDeleteInterview = async () => {
     try {
       if (interview.id) {
+        // Delete the interview document
         await deleteDoc(doc(db, "interviews", interview.id));
-        toast.success("Deleted!", { description: "Interview deleted successfully" });
+        
+        // Delete all associated interview reports
+        const reportsQuery = query(
+          collection(db, "interviewReports"),
+          where("interviewId", "==", interview.id)
+        );
+        const reportsSnapshot = await getDocs(reportsQuery);
+        for (const reportDoc of reportsSnapshot.docs) {
+          await deleteDoc(doc(db, "interviewReports", reportDoc.id));
+        }
+        
+        // Delete all associated interview recordings (videos/files)
+        const recordingsQuery = query(
+          collection(db, "interviewRecordings"),
+          where("interviewId", "==", interview.id)
+        );
+        const recordingsSnapshot = await getDocs(recordingsQuery);
+        for (const recordingDoc of recordingsSnapshot.docs) {
+          await deleteDoc(doc(db, "interviewRecordings", recordingDoc.id));
+        }
+        
+        // Delete any other associated data (answers, feedback, etc.)
+        const answersQuery = query(
+          collection(db, "interviewAnswers"),
+          where("interviewId", "==", interview.id)
+        );
+        const answersSnapshot = await getDocs(answersQuery);
+        for (const answerDoc of answersSnapshot.docs) {
+          await deleteDoc(doc(db, "interviewAnswers", answerDoc.id));
+        }
+        
+        toast.success("Deleted!", { 
+          description: "Interview and all associated data deleted successfully" 
+        });
       }
     } catch (error) {
       console.log(error);
@@ -163,7 +197,7 @@ export const InterviewPin = ({ interview, onMockPage }: InterviewPinProps) => {
           // Rating
           pdf.setFont('helvetica', 'bold');
           const ratingColor = q.rating >= 8 ? [34, 197, 94] : q.rating >= 6 ? [251, 191, 36] : [239, 68, 68];
-          pdf.setTextColor(...ratingColor);
+          pdf.setTextColor(ratingColor[0], ratingColor[1], ratingColor[2]);
           yPosition = addTextWithWrapping(`Rating: ${q.rating}/10`, margin + 5, yPosition, pageWidth - 2 * margin, 10);
           pdf.setTextColor(0, 0, 0);
           pdf.setFont('helvetica', 'normal');

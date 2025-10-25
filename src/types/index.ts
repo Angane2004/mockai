@@ -9,6 +9,19 @@ export interface User {
   updateAt: Timestamp | FieldValue;
 }
 
+export interface UserProfile {
+  id: string;
+  userId: string;
+  collegeName: string;
+  currentYear: string;
+  degree: string;
+  branch: string;
+  phoneNumber?: string;
+  linkedinUrl?: string;
+  createdAt: Timestamp | FieldValue;
+  updatedAt: Timestamp | FieldValue;
+}
+
 export interface Interview {
   id: string;
   position: string;
@@ -52,4 +65,34 @@ export interface UserAnswer {
   userId: string;
   createdAt: Timestamp;
   updateAt: Timestamp;
+}
+
+export interface InterviewReport {
+  id: string;
+  interviewId: string;
+  userId: string;
+  userName: string;
+  overallRating: number;
+  overallFeedback: string;
+  questionFeedbacks: {
+    question: string;
+    userAnswer: string;
+    idealAnswer: string;
+    feedback: string;
+    rating: number;
+    strengths: string[];
+    improvements: string[];
+  }[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface DeletedUser {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  deletedBy: string;
+  reason: string;
+  deletedAt: Timestamp;
 }

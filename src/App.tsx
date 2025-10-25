@@ -9,6 +9,8 @@ import HomePage from "@/routes/home";
 import { About } from "./routes/about";
 import { SignInPage } from "./routes/sign-in";
 import { SignUpPage } from "./routes/sign-up";
+import { AdminSignInPage } from "./routes/admin-sign-in";
+import { AdminDashboard } from "./routes/admin-dashboard";
 import { Generate } from "./components/generate";
 import { Dashboard } from "./routes/dashboard";
 import { CreateEditPage } from "./routes/create-edit-page";
@@ -37,7 +39,11 @@ const App = () => {
         <Route element={<AuthenticationLayout />}>
           <Route path="/signin/*" element={<SignInPage />} />
           <Route path="/signup/*" element={<SignUpPage />} />
+          <Route path="/admin-signin/*" element={<AdminSignInPage />} />
         </Route>
+
+        {/* admin routes */}
+        <Route path="/admin-dashboard" element={<AdminDashboard />} />
 
         {/* protected routes */}
         <Route

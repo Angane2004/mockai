@@ -11,34 +11,30 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Lightbulb } from "lucide-react";
 import { QuestionSectionOllama } from "@/components/question-section-ollama";
 import { toast } from "sonner";
-import { ollamaService } from "@/scripts/ollama"; // Import Ollama service
+import { aiService } from "@/scripts/ai-service"; // Import unified AI service
 
-// Ollama AI helper function to replace Gemini
+// AI helper function that works with both Ollama (local) and Gemini (cloud)
 async function generateQuestionsFromStoredInterview(
   interview: Interview
 ): Promise<string[]> {
   try {
-    // Check if Ollama service is available
-    const isHealthy = await ollamaService.checkHealth();
-    if (!isHealthy) {
-      throw new Error("Ollama service is not available. Please make sure Ollama is running.");
-    }
-
     // Extract resume text from base64 if available
     let resumeText = "";
     if (interview.resumeFile) {
-      // Note: In a real implementation, you might want to extract text from PDF/DOC files
-      // For now, we'll assume it's text or provide a placeholder
-      resumeText = "Resume content available";
+      try {
+        resumeText = atob(interview.resumeFile.data);
+      } catch {
+        resumeText = "Resume content available";
+      }
     }
 
-    // Use Ollama service to generate questions
-    const questions = await ollamaService.generateInterviewQuestions({
+    // Use AI service (automatically selects Ollama or Gemini)
+    const questions = await aiService.generateInterviewQuestions({
       objective: interview.objective || interview.position || 'General Interview',
       interviewType: interview.interviewType || 'Technical',
       depthLevel: interview.depthLevel || 'Intermediate',
       numQuestions: interview.numQuestions || 5,
-      resumeText: interview.resumeFile ? atob(interview.resumeFile.data) : undefined,
+      resumeText: resumeText || undefined,
     });
 
     if (questions.length === 0) {
@@ -47,7 +43,7 @@ async function generateQuestionsFromStoredInterview(
 
     return questions;
   } catch (err) {
-    console.error("Ollama error:", err);
+    console.error("AI generation error:", err);
     throw err;
   }
 }
@@ -75,9 +71,9 @@ export const MockInterviewPageOllama = () => {
           } as Interview;
           setInterview(fetched);
 
-          // Generate questions using Ollama
-          toast("Generating questions with Ollama...", {
-            description: "Please wait while local AI generates interview questions.",
+          // Generate questions using AI (Ollama or Gemini)
+          toast("Generating questions with AI...", {
+            description: "Please wait while AI generates interview questions.",
           });
           
           const newQuestions = await generateQuestionsFromStoredInterview(fetched);
@@ -85,11 +81,12 @@ export const MockInterviewPageOllama = () => {
 
           if (newQuestions.length === 0) {
             toast.error("Failed to generate questions.", {
-              description: "Please check if Ollama is running and try again.",
+              description: "Please try again.",
             });
           } else {
+            const aiType = aiService.isUsingOllama() ? 'Ollama (local)' : 'Gemini API';
             toast.success("Questions generated successfully!", {
-              description: `Generated ${newQuestions.length} questions using Ollama.`,
+              description: `Generated ${newQuestions.length} questions using ${aiType}.`,
             });
           }
         } else {
@@ -143,12 +140,10 @@ export const MockInterviewPageOllama = () => {
           <Lightbulb className="h-5 w-5 text-green-600" />
           <div>
             <AlertTitle className="text-green-800 font-semibold">
-              Powered by Ollama (Local AI)
+              Powered by AI
             </AlertTitle>
             <AlertDescription className="text-sm text-green-700 mt-1 leading-relaxed">
-              Your interview questions and feedback are generated locally using Ollama's Llama 3 model.
-              <br />
-              This means your data stays private and works offline!
+              Your interview questions and feedback are generated using AI (Ollama locally if available, or Gemini API in the cloud).
               <br />
               <br />
               <strong>How to use:</strong>{" "}

@@ -607,16 +607,13 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
     setReportStep('analyzing');
     
     try {
-      // Step 1: Health check
-      console.log('⚕️ Step 1: Checking Ollama health...');
+      // Step 1: Health check (optional - report generation works without Ollama)
+      console.log('⚕️ Step 1: Checking AI service availability...');
       setReportProgress(10);
       const isHealthy = await ollamaService.checkHealth();
-      console.log('Health check result:', isHealthy);
+      console.log('AI service health check result:', isHealthy ? 'Ollama available' : 'Using template-based analysis');
       
-      if (!isHealthy) {
-        console.error('❌ Ollama health check failed');
-        throw new Error("Ollama service is not available. Please make sure Ollama is running.");
-      }
+      // Note: Report generation will work even without Ollama using template-based analysis
 
       // Step 2: Prepare data
       console.log('📊 Step 2: Preparing interview data...');

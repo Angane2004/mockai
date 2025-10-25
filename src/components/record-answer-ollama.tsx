@@ -16,7 +16,7 @@ import { useParams } from "react-router-dom";
 import WebCam from "react-webcam";
 import { TooltipButton } from "./tooltip-button";
 import { toast } from "sonner";
-import { ollamaService } from "@/scripts/ollama"; // Import Ollama service instead of Gemini
+import { aiService } from "@/scripts/ai-service"; // Import unified AI service
 import { SaveModal } from "./save-modal";
 import {
   addDoc,
@@ -103,14 +103,8 @@ export const RecordAnswerOllama = ({
     setIsAiGenerating(true);
 
     try {
-      // Check if Ollama service is available
-      const isHealthy = await ollamaService.checkHealth();
-      if (!isHealthy) {
-        throw new Error("Ollama service is not available. Please make sure Ollama is running.");
-      }
-
-      // Use Ollama service to generate feedback
-      const aiResult = await ollamaService.generateFeedback(
+      // Use AI service (automatically selects Ollama or Gemini)
+      const aiResult = await aiService.generateFeedback(
         qst,
         userAns,
         interviewType,
@@ -121,8 +115,8 @@ export const RecordAnswerOllama = ({
     } catch (error) {
       console.log(error);
       toast.error("Error", {
-        description: error instanceof Error 
-          ? error.message 
+        description: error instanceof Error
+          ? error.message
           : "An error occurred while generating feedback.",
       });
       return { 
@@ -175,7 +169,7 @@ export const RecordAnswerOllama = ({
         });
 
         toast.success("Saved", { 
-          description: "Your answer has been saved and analyzed by Ollama!" 
+          description: "Your answer has been saved and analyzed by AI!" 
         });
         onAnswerSaved(); // Call the callback to advance to the next question
       }
@@ -258,7 +252,7 @@ export const RecordAnswerOllama = ({
           {isAiGenerating ? (
             <div className="flex items-center gap-2 mt-4 text-blue-600">
               <Loader className="animate-spin h-4 w-4" />
-              <span>Ollama is analyzing your answer...</span>
+              <span>AI is analyzing your answer...</span>
             </div>
           ) : (
             aiResult && (

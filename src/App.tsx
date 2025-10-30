@@ -18,7 +18,6 @@ import { MockLoadPage } from "./routes/mock-load-page";
 import { MockInterviewPageOllama } from "./routes/mock-interview-page-ollama";
 import { Feedback } from "./routes/feedback";
 import { WatchSession } from "./routes/watch-session";
-import { OllamaTestPage } from "./routes/ollama-test";
 import { DebugRecordings } from "./routes/debug-recordings";
 import { CreateJobDescriptionInterview } from "./routes/create-job-description-interview";
 import { CreateResumeBasedInterview } from "./routes/create-resume-based-interview";
@@ -65,7 +64,6 @@ const App = () => {
             />
             <Route path="feedback/:interviewId" element={<Feedback />} />
             <Route path="watch-session/:interviewId" element={<WatchSession />} />
-            <Route path="ollama-test" element={<OllamaTestPage />} />
             <Route path="debug-recordings" element={<DebugRecordings />} />
             <Route path="create/job-description" element={<CreateJobDescriptionInterview />} />
             <Route path="create/resume-based" element={<CreateResumeBasedInterview />} />

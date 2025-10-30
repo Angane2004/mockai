@@ -40,7 +40,7 @@ export const ContainerRecorder: React.FC<ContainerRecorderProps> = ({
   // Create a recording that captures both screen content and webcam
   const createContainerRecording = useCallback(async (): Promise<MediaStream | null> => {
     try {
-      console.log('🎨 Creating screen + camera recording...');
+      console.log(' Creating screen + camera recording...');
       
       let screenStream: MediaStream | null = null;
       let cameraStream: MediaStream | null = null;
@@ -86,7 +86,7 @@ export const ContainerRecorder: React.FC<ContainerRecorderProps> = ({
       
       // If we have screen capture, use it as primary; otherwise use camera
       if (screenStream && cameraStream) {
-        console.log('🎆 Combining screen capture with camera audio...');
+        console.log(' Combining screen capture with camera audio...');
         
         // Use screen video + camera audio
         const combinedTracks = [
@@ -173,7 +173,7 @@ export const ContainerRecorder: React.FC<ContainerRecorderProps> = ({
       };
 
       recorder.onstart = () => {
-        console.log('🎬 Container recording started');
+        console.log('Container recording started');
         setRecordingStatus('recording');
         setRecordingDuration(0);
         
@@ -227,7 +227,7 @@ export const ContainerRecorder: React.FC<ContainerRecorderProps> = ({
         
         try {
           // First try screen capture as fallback
-          console.log('🗺️ Trying screen capture fallback...');
+          console.log('Trying screen capture fallback...');
           fallbackStream = await navigator.mediaDevices.getDisplayMedia({
             video: { width: { ideal: 1280 }, height: { ideal: 720 } },
             audio: true
@@ -264,7 +264,7 @@ export const ContainerRecorder: React.FC<ContainerRecorderProps> = ({
         };
         
         recorder.onstart = () => {
-          console.log('🎥 Fallback recording started');
+          console.log('Fallback recording started');
           setRecordingStatus('recording');
           setRecordingDuration(0);
           
@@ -287,7 +287,7 @@ export const ContainerRecorder: React.FC<ContainerRecorderProps> = ({
           }
           
           const blob = new Blob(chunks, { type: 'video/webm' });
-          console.log('💾 Fallback recording blob created:', blob.size, 'bytes');
+          console.log('Fallback recording blob created:', blob.size, 'bytes');
           
           onRecordingReady(blob);
           setRecordingStatus('idle');
@@ -343,7 +343,7 @@ export const ContainerRecorder: React.FC<ContainerRecorderProps> = ({
     });
     
     if (isRecording && recordingStatus === 'idle') {
-      console.log('🚀 Auto-starting recording...');
+      console.log('Auto-starting recording...');
       startRecording().catch(error => {
         console.error('❌ Auto-start failed:', error);
         toast.error('Recording failed to start', {

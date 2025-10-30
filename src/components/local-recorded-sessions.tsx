@@ -50,13 +50,13 @@ export const LocalRecordedSessions: React.FC = () => {
     }
 
     try {
-      console.log('🔄 Loading recordings from local storage for user:', userId);
+      console.log(' Loading recordings from local storage for user:', userId);
       setRefreshing(true);
       
       const userRecordings = await localRecordingStorage.getUserRecordings(userId);
       const stats = await localRecordingStorage.getStorageStats();
       
-      console.log('📊 Loaded recordings:', {
+      console.log(' Loaded recordings:', {
         count: userRecordings.length,
         totalSize: stats.totalSize,
         availableSpace: stats.availableSpace
@@ -225,7 +225,7 @@ export const LocalRecordedSessions: React.FC = () => {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-            📹 Local Recorded Sessions
+             Local Recorded Sessions
             <Badge variant="secondary" className="text-xs">
               <HardDrive className="h-3 w-3 mr-1" />
               Local Storage
@@ -235,12 +235,12 @@ export const LocalRecordedSessions: React.FC = () => {
             {recordings.length} recording{recordings.length !== 1 ? 's' : ''} • 
             Total size: {storageStats ? formatFileSize(storageStats.totalSize) : 'Unknown'}
             {storageStats?.availableSpace && (
-              <> • Available: {formatFileSize(storageStats.availableSpace)}</>
+              <>  Available: {formatFileSize(storageStats.availableSpace)}</>
             )}
           </p>
         </div>
         <Button onClick={loadRecordings} disabled={refreshing} variant="outline" size="sm">
-          {refreshing ? 'Refreshing...' : '🔄 Refresh'}
+          {refreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
 
@@ -383,7 +383,7 @@ export const LocalRecordedSessions: React.FC = () => {
         <div className="mt-6 text-center">
           <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
             <p className="text-sm text-green-800 font-medium mb-1">
-              🔒 Privacy First: Your recordings are stored locally on your device
+               Privacy First: Your recordings are stored locally on your device
             </p>
             <p className="text-xs text-green-600">
               No cloud upload • Instant access • Full control over your data

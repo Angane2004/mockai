@@ -43,7 +43,7 @@ export const DebugRecordings: React.FC = () => {
       debug.database.projectId = db.app.options.projectId;
 
       // Check all recordings
-      console.log('🔍 Checking all recordings...');
+      console.log(' Checking all recordings...');
       const allRecordingsQuery = collection(db, 'interviewRecordings');
       const allSnapshot = await getDocs(allRecordingsQuery);
       debug.recordings.total = allSnapshot.docs.length;
@@ -60,7 +60,7 @@ export const DebugRecordings: React.FC = () => {
 
       if (userId) {
         // Check user-specific recordings
-        console.log('🔍 Checking user recordings for:', userId);
+        console.log(' Checking user recordings for:', userId);
         const userRecordingsQuery = query(
           collection(db, 'interviewRecordings'),
           where('userId', '==', userId)
@@ -69,7 +69,7 @@ export const DebugRecordings: React.FC = () => {
         debug.recordings.userRecordings = userSnapshot.docs.length;
 
         // Test write capability
-        console.log('🔍 Testing write capability...');
+        console.log(' Testing write capability...');
         try {
           const testDoc = await addDoc(collection(db, 'debugTest'), {
             userId,
@@ -92,7 +92,7 @@ export const DebugRecordings: React.FC = () => {
     setLoading(false);
     
     // Log everything to console
-    console.log('🔍 DEBUG REPORT:', debug);
+    console.log(' DEBUG REPORT:', debug);
   };
 
   const createTestRecording = async () => {
@@ -138,7 +138,7 @@ export const DebugRecordings: React.FC = () => {
           {loading ? 'Running Debug...' : '🔍 Run Debug Check'}
         </Button>
         <Button onClick={createTestRecording} variant="outline">
-          🧪 Create Test Recording
+           Create Test Recording
         </Button>
       </div>
 
@@ -148,7 +148,7 @@ export const DebugRecordings: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                🔐 Authentication Status
+                 Authentication Status
                 <Badge variant={debugInfo.authState ? "default" : "destructive"}>
                   {debugInfo.authState ? "✅ Authenticated" : "❌ Not Authenticated"}
                 </Badge>
@@ -170,7 +170,7 @@ export const DebugRecordings: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                🗄️ Database Status
+                 Database Status
                 <Badge variant={debugInfo.database.connected ? "default" : "destructive"}>
                   {debugInfo.database.connected ? "✅ Connected" : "❌ Disconnected"}
                 </Badge>
@@ -192,7 +192,7 @@ export const DebugRecordings: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                📹 Recording Data
+                 Recording Data
                 <Badge variant={debugInfo.recordings.userRecordings > 0 ? "default" : "secondary"}>
                   {debugInfo.recordings.userRecordings} User Recordings
                 </Badge>
@@ -251,7 +251,7 @@ export const DebugRecordings: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                ✍️ Write Test
+                 Write Test
                 <Badge variant={debugInfo.testWrite.success ? "default" : "destructive"}>
                   {debugInfo.testWrite.success ? "✅ Success" : "❌ Failed"}
                 </Badge>
@@ -275,7 +275,7 @@ export const DebugRecordings: React.FC = () => {
           {/* Raw Debug Data */}
           <Card>
             <CardHeader>
-              <CardTitle>🔧 Raw Debug Data</CardTitle>
+              <CardTitle>Raw Debug Data</CardTitle>
             </CardHeader>
             <CardContent>
               <pre className="text-xs bg-gray-100 p-4 rounded overflow-auto max-h-64">

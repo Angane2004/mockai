@@ -218,14 +218,14 @@ export const InterviewRecorder: React.FC<InterviewRecorderProps> = ({
         <div className="text-center text-sm">
           {isRecording ? (
             <div className="space-y-2">
-              <span className="text-red-600 font-medium">🎥 Recording in Progress</span>
+              <span className="text-red-600 font-medium"> Recording in Progress</span>
               <p className="text-gray-500 text-xs">
                 Your interview session is being recorded for later review
               </p>
             </div>
           ) : (
             <div className="space-y-2">
-              <span className="text-gray-500">📹 Recording Ready</span>
+              <span className="text-gray-500"> Recording Ready</span>
               <p className="text-gray-400 text-xs">
                 Recording will start automatically when interview begins
               </p>

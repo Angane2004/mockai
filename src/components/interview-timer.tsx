@@ -75,7 +75,7 @@ export const InterviewTimer: React.FC<InterviewTimerProps> = ({
 
           if (newTime <= 0) {
             setIsRunning(false);
-            toast.error('Time\'s up! Interview ended automatically 🕐', {
+            toast.error('Time\'s up! Interview ended automatically ', {
               description: 'Your interview has been completed and feedback is being generated',
               duration: 5000,
             });
@@ -136,10 +136,10 @@ export const InterviewTimer: React.FC<InterviewTimerProps> = ({
             <span className="text-gray-500">Ready to start</span>
           )}
           {isRunning && (
-            <span className="text-green-600">• Interview in progress</span>
+            <span className="text-green-600"> Interview in progress</span>
           )}
           {timeLeft === 0 && (
-            <span className="text-red-600">⏰ Time expired</span>
+            <span className="text-red-600"> Time expired</span>
           )}
         </div>
       </CardContent>

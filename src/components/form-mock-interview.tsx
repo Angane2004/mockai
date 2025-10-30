@@ -238,7 +238,7 @@ export const FormMockInterview = ({ initialData: _initialData }: FormMockIntervi
                 <FormControl>
                   <Textarea
                     className="h-24"
-                    placeholder="Assess candidate’s React + Firebase skills"
+                    placeholder="Assess candidate&apos;s React + Firebase skills"
                     {...field}
                   />
                 </FormControl>

@@ -320,7 +320,7 @@ export const InteractiveLoadingPage = ({
                 <p className="text-sm text-yellow-800">
                   <strong>Taking longer than expected?</strong><br />
                   This is normal for the first run! Ollama might be downloading the model or warming up. 
-                  Subsequent runs will be much faster! ⚡
+                  Subsequent runs will be much faster!
                 </p>
               </CardContent>
             </Card>

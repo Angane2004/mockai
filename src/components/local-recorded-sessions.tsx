@@ -192,7 +192,7 @@ export const LocalRecordedSessions: React.FC = () => {
             <p className="text-gray-600 text-sm mt-1">Your interview recordings stored on this device</p>
           </div>
           <Button onClick={loadRecordings} disabled={refreshing} variant="outline" size="sm">
-            {refreshing ? 'Refreshing...' : '🔄 Refresh'}
+            {refreshing ? 'Refreshing...' : ' Refresh'}
           </Button>
         </div>
         

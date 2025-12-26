@@ -1,7 +1,4 @@
-/**
- * Unified AI Service
- * Automatically uses Ollama when available (local dev), falls back to Gemini API (production)
- */
+
 
 import { ollamaService } from './ollama';
 import { chatSession } from './index';

@@ -27,16 +27,17 @@ export const CreateResumeBasedInterview = () => {
     interviewType: '',
     depthLevel: '',
     numQuestions: 5,
-    duration: 30
+    duration: 30,
+    aptitudeDifficulty: '' // For aptitude tests
   });
-  
+
   const [fileState, setFileState] = useState<FileUploadState>({
     file: null,
     uploading: false,
     uploaded: false,
     error: null
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const { userId } = useAuth();
@@ -130,34 +131,81 @@ export const CreateResumeBasedInterview = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.interviewName || !formData.interviewType || !formData.depthLevel) {
+
+    // Validate common fields
+    if (!formData.interviewName || !formData.interviewType) {
       toast.error('Missing fields', {
         description: 'Please fill in all required fields'
       });
       return;
     }
 
-    if (!fileState.uploaded || !fileState.file) {
-      toast.error('Resume required', {
-        description: 'Please upload your resume to continue'
-      });
-      return;
+    // Validate specific fields based on interview type
+    if (formData.interviewType === 'Aptitude') {
+      if (!formData.aptitudeDifficulty) {
+        toast.error('Missing fields', {
+          description: 'Please select aptitude difficulty level'
+        });
+        return;
+      }
+    } else {
+      if (!formData.depthLevel) {
+        toast.error('Missing fields', {
+          description: 'Please select experience level'
+        });
+        return;
+      }
+    }
+
+    // For non-aptitude interviews, resume is required
+    if (formData.interviewType !== 'Aptitude') {
+      if (!fileState.uploaded || !fileState.file) {
+        toast.error('Resume required', {
+          description: 'Please upload your resume to continue'
+        });
+        return;
+      }
     }
 
     setIsLoading(true);
 
     try {
-      // Convert file to base64 for storage
+      // Handle aptitude interviews without resume
+      if (formData.interviewType === 'Aptitude') {
+        const interviewData = {
+          name: formData.interviewName,
+          objective: 'Aptitude Test',
+          interviewType: formData.interviewType,
+          depthLevel: '',
+          aptitudeDifficulty: formData.aptitudeDifficulty,
+          numQuestions: formData.numQuestions,
+          duration: formData.duration,
+          userId,
+          type: 'resume-based',
+          createdAt: serverTimestamp(),
+        };
+
+        const docRef = await addDoc(collection(db, 'interviews'), interviewData);
+
+        toast.success('Aptitude Test Created! 🎉', {
+          description: 'Starting your test...',
+        });
+
+        navigate(`/generate/interview/${docRef.id}/start`);
+        return;
+      }
+
+      // Handle regular resume-based interviews
       const reader = new FileReader();
       reader.onload = async () => {
         const base64Data = reader.result as string;
-        
+
         const interviewData = {
           name: formData.interviewName,
           objective: 'Resume-based Interview',
           interviewType: formData.interviewType,
           depthLevel: formData.depthLevel,
+          aptitudeDifficulty: '',
           numQuestions: formData.numQuestions,
           duration: formData.duration,
           userId,
@@ -173,7 +221,7 @@ export const CreateResumeBasedInterview = () => {
         };
 
         const docRef = await addDoc(collection(db, 'interviews'), interviewData);
-        
+
         toast.success('Resume Interview Created! 🎉', {
           description: 'Starting your personalized interview...',
         });
@@ -182,7 +230,12 @@ export const CreateResumeBasedInterview = () => {
         navigate(`/generate/interview/${docRef.id}/start`);
       };
 
-      reader.readAsDataURL(fileState.file);
+      reader.onerror = () => {
+        toast.error('Failed to read resume file');
+        setIsLoading(false);
+      };
+
+      reader.readAsDataURL(fileState.file!);
     } catch (error) {
       console.error('Error creating interview:', error);
       toast.error('Failed to create interview', {
@@ -253,15 +306,14 @@ export const CreateResumeBasedInterview = () => {
                 <FileUp className="h-4 w-4" />
                 Upload Resume *
               </Label>
-              
+
               <div
-                className={`relative border-2 border-dashed rounded-xl p-8 transition-all duration-300 ${
-                  dragActive 
-                    ? 'border-green-500 bg-green-50' 
-                    : fileState.uploaded 
-                    ? 'border-green-500 bg-green-50' 
+                className={`relative border-2 border-dashed rounded-xl p-8 transition-all duration-300 ${dragActive
+                  ? 'border-green-500 bg-green-50'
+                  : fileState.uploaded
+                    ? 'border-green-500 bg-green-50'
                     : 'border-gray-300 hover:border-green-400 hover:bg-green-50'
-                }`}
+                  }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
@@ -335,45 +387,100 @@ export const CreateResumeBasedInterview = () => {
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Technical">Technical</SelectItem>
+                    <SelectItem value="Technical Code">Technical Code</SelectItem>
+                    <SelectItem value="Technical Theory">Technical Theory</SelectItem>
                     <SelectItem value="Behavioral">Behavioral</SelectItem>
                     <SelectItem value="System Design">System Design</SelectItem>
                     <SelectItem value="Mixed">Mixed Interview</SelectItem>
+                    <SelectItem value="Aptitude">Aptitude Test</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>Experience Level *</Label>
-                <Select value={formData.depthLevel} onValueChange={(value) => handleInputChange('depthLevel', value)}>
-                  <SelectTrigger className="focus:ring-2 focus:ring-green-500">
-                    <SelectValue placeholder="Select level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Fresher">Fresher (0-1 years)</SelectItem>
-                    <SelectItem value="Intermediate">Intermediate (2-4 years)</SelectItem>
-                    <SelectItem value="Experienced">Experienced (5+ years)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Conditional rendering based on interview type */}
+              {formData.interviewType === 'Aptitude' ? (
+                <div className="space-y-2">
+                  <Label>Aptitude Difficulty Level *</Label>
+                  <Select value={formData.aptitudeDifficulty} onValueChange={(value) => handleInputChange('aptitudeDifficulty', value)}>
+                    <SelectTrigger className="focus:ring-2 focus:ring-green-500">
+                      <SelectValue placeholder="Select difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Easy">Easy</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                      <SelectItem value="Hard">Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : formData.interviewType === 'Technical Code' ? (
+                <>
+                  <div className="space-y-2">
+                    <Label>Difficulty Level *</Label>
+                    <Select value={formData.depthLevel} onValueChange={(value) => handleInputChange('depthLevel', value)}>
+                      <SelectTrigger className="focus:ring-2 focus:ring-green-500">
+                        <SelectValue placeholder="Select difficulty" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Easy">Easy</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="Hard">Hard</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-4">
-                <Label htmlFor="numQuestions" className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Questions Count
-                </Label>
-                <Select value={formData.numQuestions.toString()} onValueChange={(value) => handleInputChange('numQuestions', parseInt(value))}>
-                  <SelectTrigger className="focus:ring-2 focus:ring-green-500">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="3">3 Questions</SelectItem>
-                    <SelectItem value="5">5 Questions</SelectItem>
-                    <SelectItem value="7">7 Questions</SelectItem>
-                    <SelectItem value="10">10 Questions</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-4">
+                    <Label htmlFor="numQuestions" className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      Questions Count
+                    </Label>
+                    <Select value={formData.numQuestions.toString()} onValueChange={(value) => handleInputChange('numQuestions', parseInt(value))}>
+                      <SelectTrigger className="focus:ring-2 focus:ring-green-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3">3 Questions</SelectItem>
+                        <SelectItem value="5">5 Questions</SelectItem>
+                        <SelectItem value="7">7 Questions</SelectItem>
+                        <SelectItem value="10">10 Questions</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label>Experience Level *</Label>
+                    <Select value={formData.depthLevel} onValueChange={(value) => handleInputChange('depthLevel', value)}>
+                      <SelectTrigger className="focus:ring-2 focus:ring-green-500">
+                        <SelectValue placeholder="Select level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Fresher">Fresher (0-1 years)</SelectItem>
+                        <SelectItem value="Intermediate">Intermediate (2-4 years)</SelectItem>
+                        <SelectItem value="Experienced">Experienced (5+ years)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label htmlFor="numQuestions" className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      Questions Count
+                    </Label>
+                    <Select value={formData.numQuestions.toString()} onValueChange={(value) => handleInputChange('numQuestions', parseInt(value))}>
+                      <SelectTrigger className="focus:ring-2 focus:ring-green-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3">3 Questions</SelectItem>
+                        <SelectItem value="5">5 Questions</SelectItem>
+                        <SelectItem value="7">7 Questions</SelectItem>
+                        <SelectItem value="10">10 Questions</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Duration */}
@@ -406,7 +513,7 @@ export const CreateResumeBasedInterview = () => {
                   <div>
                     <h4 className="font-semibold text-green-900 mb-1">AI Resume Analysis</h4>
                     <p className="text-sm text-green-700">
-                      Our Llama AI will analyze your resume and create questions based on your skills, 
+                      Our Llama AI will analyze your resume and create questions based on your skills,
                       experience, and projects. Get ready for a truly personalized interview experience!
                     </p>
                   </div>

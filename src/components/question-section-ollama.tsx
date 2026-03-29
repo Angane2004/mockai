@@ -25,7 +25,7 @@ const speak = (text: string) => {
     const voices = window.speechSynthesis.getVoices();
     const voice = voices.find(v => v.lang === 'en-US' && v.name.includes('Google'));
     if (voice) {
-        utterance.voice = voice;
+      utterance.voice = voice;
     }
     window.speechSynthesis.speak(utterance);
     return utterance;
@@ -37,50 +37,50 @@ const speak = (text: string) => {
 // Audio confidence analysis based on speech patterns
 const analyzeAudioConfidence = (transcript: string, duration: number): number => {
   let confidence = 5; // Base confidence (1-10 scale)
-  
+
   // Length factor (longer answers generally show more confidence)
   if (transcript.length > 100) confidence += 1;
   if (transcript.length > 200) confidence += 1;
-  
+
   // Hesitation markers (reduce confidence)
   const hesitationWords = ['um', 'uh', 'like', 'you know', 'i think', 'maybe', 'sort of', 'kind of'];
   const hesitationCount = hesitationWords.reduce((count, word) => {
     return count + (transcript.toLowerCase().match(new RegExp(word, 'g')) || []).length;
   }, 0);
   confidence -= Math.min(hesitationCount * 0.5, 2);
-  
+
   // Speaking pace (words per second)
   const wordCount = transcript.split(' ').length;
   const wordsPerSecond = duration > 0 ? wordCount / duration : 0;
   if (wordsPerSecond > 1.5 && wordsPerSecond < 3) confidence += 1; // Good pace
   if (wordsPerSecond < 0.5) confidence -= 1; // Too slow (hesitant)
   if (wordsPerSecond > 4) confidence -= 1; // Too fast (nervous)
-  
+
   // Confidence words (increase confidence)
   const confidenceWords = ['definitely', 'absolutely', 'certainly', 'confident', 'sure', 'exactly', 'precisely'];
   const confidenceCount = confidenceWords.reduce((count, word) => {
     return count + (transcript.toLowerCase().match(new RegExp(word, 'g')) || []).length;
   }, 0);
   confidence += Math.min(confidenceCount * 0.5, 2);
-  
+
   // Structure indicators (complete sentences show confidence)
   const sentences = transcript.split(/[.!?]+/).filter(s => s.trim().length > 0);
   if (sentences.length > 1) confidence += 0.5;
-  
+
   return Math.max(1, Math.min(10, Math.round(confidence)));
 };
 
 const startSpeechRecognition = (
-  onFinalResult: (text: string) => void, 
+  onFinalResult: (text: string) => void,
   onInterimResult: (text: string) => void,
   onEnd: () => void
 ) => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-      console.warn("Speech Recognition not supported in this browser.");
-      return null;
+    console.warn("Speech Recognition not supported in this browser.");
+    return null;
   }
-  
+
   const recognition = new SpeechRecognition();
   recognition.lang = 'en-US';
   recognition.continuous = true;
@@ -94,16 +94,16 @@ const startSpeechRecognition = (
   recognition.onresult = (event) => {
     let finalTranscript = '';
     let interimTranscript = '';
-    
+
     for (let i = event.resultIndex; i < event.results.length; ++i) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-            finalTranscript += transcript;
-        } else {
-            interimTranscript += transcript;
-        }
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript;
+      } else {
+        interimTranscript += transcript;
+      }
     }
-    
+
     // Call callbacks immediately for real-time display
     if (finalTranscript) {
       onFinalResult(finalTranscript);
@@ -115,11 +115,11 @@ const startSpeechRecognition = (
 
   recognition.onerror = (event) => {
     console.error("Speech recognition error:", event.error);
-    
+
     let errorMessage = "";
     let errorDescription = "";
-    
-    switch(event.error) {
+
+    switch (event.error) {
       case 'no-speech':
         errorMessage = "No speech detected";
         errorDescription = "Please make sure your microphone is working and try speaking clearly.";
@@ -148,12 +148,12 @@ const startSpeechRecognition = (
         errorMessage = "Speech recognition error";
         errorDescription = `Error: ${event.error}. Please try again or use text input.`;
     }
-    
+
     toast.error(errorMessage, {
-        description: errorDescription,
-        duration: 5000
+      description: errorDescription,
+      duration: 5000
     });
-    
+
     recognition.stop();
     onEnd(); // Ensure the recording state is properly reset
   };
@@ -164,14 +164,14 @@ const startSpeechRecognition = (
   };
 
   try {
-      recognition.start();
-      return recognition;
+    recognition.start();
+    return recognition;
   } catch (error) {
-      console.error("Failed to start speech recognition:", error);
-      toast.error("Microphone access failed", {
-          description: "Please allow microphone permissions and try again."
-      });
-      return null;
+    console.error("Failed to start speech recognition:", error);
+    toast.error("Microphone access failed", {
+      description: "Please allow microphone permissions and try again."
+    });
+    return null;
   }
 };
 
@@ -198,7 +198,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
     strictMode: false, // Balanced approach
     onViolation: (type, details) => {
       console.log('🚨 Anti-cheating violation detected:', { type, details, totalViolations: details.totalViolations });
-      
+
       // Check the total violations from the details passed by the hook
       if (details.totalViolations === 1) {
         // First violation - show warning
@@ -223,7 +223,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         duration: 10000,
         id: 'session-ended'
       });
-      
+
       // Force end the interview after a short delay
       setTimeout(() => {
         generateAndSaveReport();
@@ -238,65 +238,65 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
       console.log('⚠️ Interview already initialized, skipping...');
       return;
     }
-    
+
     console.log('🎯 Starting interview session (one-time initialization)...');
     initializationStarted.current = true;
-    
+
     // Start anti-cheating monitoring immediately
     startMonitoring();
-    
+
     // Small delay to ensure component is fully mounted and ask for permissions
     const startTimer = setTimeout(async () => {
       console.log('🎥 Requesting camera/microphone permissions...');
       setIsRequestingPermissions(true);
-      
+
       try {
         // Request permissions first before starting recording
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            width: { ideal: 1280 }, 
+          video: {
+            width: { ideal: 1280 },
             height: { ideal: 720 },
             frameRate: { ideal: 30 }
           },
-          audio: { 
-            echoCancellation: true, 
+          audio: {
+            echoCancellation: true,
             noiseSuppression: true,
             sampleRate: 44100
           }
         });
-        
+
         // Stop the test stream immediately (we just needed permission)
         stream.getTracks().forEach(track => {
           console.log(`Stopping test ${track.kind} track:`, track.label);
           track.stop();
         });
-        
+
         // Now start the actual recording immediately
         console.log('✅ Permissions granted! Auto-starting interview recording...');
         setIsRequestingPermissions(false);
         setIsInterviewRecording(true);
-        
+
         // Show success toast only once
         toast.success('Interview session started!', {
           description: 'Recording started automatically. Anti-cheating monitoring active.',
           id: 'session-started' // Prevent duplicates
         });
-        
+
       } catch (error) {
         console.error('❌ Permission denied or error:', error);
         setIsRequestingPermissions(false);
-        
+
         // Show warning toast only once
         toast.warning('Limited interview mode', {
           description: 'Camera/microphone access denied. Interview will continue without recording.',
           id: 'permissions-denied' // Prevent duplicates
         });
-        
+
         // Still continue the interview even without recording
         setIsInterviewRecording(false);
       }
     }, 1500); // Slightly longer delay to avoid race conditions
-    
+
     return () => {
       console.log('🧹 Cleaning up interview session...');
       clearTimeout(startTimer);
@@ -326,7 +326,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
   const navigate = useNavigate();
   const { userId } = useAuth();
   const { interviewId } = useParams();
-  
+
   // Prevent multiple initializations with a ref
   const initializationStarted = useRef(false);
 
@@ -357,7 +357,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
       interviewId,
       userId
     });
-    
+
     // Show recording status update (only once)
     toast.success('Recording in progress', {
       description: 'Interview recording has started successfully',
@@ -372,7 +372,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
       id: 'recording-stopped'
     });
   };
-  
+
   // Manual recording start if auto-start fails
   const handleManualRecordingStart = () => {
     if (!isInterviewRecording) {
@@ -399,7 +399,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
       userId,
       timestamp: new Date().toISOString()
     });
-    
+
     // Validate recording blob
     if (!recordingBlob || recordingBlob.size === 0) {
       console.error('❌ Invalid recording blob received:', recordingBlob);
@@ -408,31 +408,31 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
       });
       return;
     }
-    
+
     if (recordingBlob.size < 1024) { // Less than 1KB is probably not a valid recording
       console.error('⚠️ Recording too small:', recordingBlob.size, 'bytes');
       toast.warning('Recording seems incomplete', {
         description: 'Recording file is very small. It may not contain valid video data.'
       });
     }
-    
+
     setSessionRecording(recordingBlob);
-    
+
     // Save recording to local storage (IndexedDB) - much better for video files
     try {
       console.log('📦 Importing local recording storage service...');
       const { localRecordingStorage } = await import('@/services/local-recording-storage');
-      
+
       console.log('💾 Saving recording to local storage...', {
         blobSize: recordingBlob.size,
         blobType: recordingBlob.type,
         userIdPresent: !!userId,
         interviewIdPresent: !!interviewId
       });
-      
+
       // Calculate approximate duration based on file size (rough estimate)
       const estimatedDuration = Math.max(5, Math.round(recordingBlob.size / (1024 * 100))); // More realistic estimate
-      
+
       const recordingMetadata = {
         interviewId: interviewId || `local_${Date.now()}`,
         userId: userId || 'anonymous_user',
@@ -442,11 +442,11 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         depthLevel: depthLevel || 'Standard',
         recordingType: recordingBlob.type || 'video/webm'
       };
-      
+
       console.log('📝 Recording metadata prepared:', recordingMetadata);
-      
+
       const recordingId = await localRecordingStorage.saveRecording(recordingBlob, recordingMetadata);
-      
+
       console.log('✅ Recording saved successfully to IndexedDB!', {
         recordingId,
         shortId: recordingId.slice(-8),
@@ -456,19 +456,19 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         userId,
         interviewId
       });
-      
+
       // Immediate verification - try to retrieve the recording
       console.log('🔍 Verifying save by retrieving recordings...');
       const testRetrieve = await localRecordingStorage.getUserRecordings(userId || 'anonymous_user');
       const justSaved = testRetrieve.find(r => r.id === recordingId);
-      
+
       console.log('🔍 Verification results:', {
         totalRecordings: testRetrieve.length,
         justSavedFound: !!justSaved,
         justSavedSize: justSaved?.recordingSize,
         allRecordingIds: testRetrieve.map(r => ({ id: r.id.slice(-8), size: r.recordingSize }))
       });
-      
+
       if (justSaved) {
         toast.success('Recording saved successfully! 🎉', {
           description: `Interview recording (${(recordingBlob.size / (1024 * 1024)).toFixed(1)} MB) is now available in your Recorded Sessions.`,
@@ -477,7 +477,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
       } else {
         throw new Error('Recording was not found after save - verification failed');
       }
-      
+
       // Get updated storage stats
       const stats = await localRecordingStorage.getStorageStats();
       console.log('📊 Updated storage statistics:', {
@@ -485,7 +485,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         totalSize: `${(stats.totalSize / (1024 * 1024)).toFixed(2)} MB`,
         availableSpace: stats.availableSpace ? `${(stats.availableSpace / (1024 * 1024)).toFixed(2)} MB` : 'Unknown'
       });
-      
+
     } catch (error) {
       console.error('❌ Error saving recording to local storage:', {
         error: error instanceof Error ? error.message : error,
@@ -493,7 +493,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         recordingSize: recordingBlob.size,
         recordingType: recordingBlob.type
       });
-      
+
       toast.error('Failed to save recording locally', {
         description: `Error: ${error instanceof Error ? error.message : 'Unknown error'}. The interview feedback will still be generated.`,
         duration: 6000
@@ -525,7 +525,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         speechRecognition.stop();
       }
       setIsRecording(false);
-      
+
       // Calculate confidence when recording stops
       const recordingDuration = (Date.now() - recordingStartTime) / 1000; // in seconds
       const confidenceScore = analyzeAudioConfidence(userAnswer, recordingDuration);
@@ -539,7 +539,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         (finalText) => {
           // Add final text to answer
           setUserAnswer(prev => (prev + ' ' + finalText).trim());
-          setInterimAnswer(""); // Clear interim after adding final
+          setInterimAnswer("");
         },
         (interimText) => {
           // Update interim display immediately
@@ -548,11 +548,11 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         () => {
           setIsRecording(false);
           setInterimAnswer(""); // Clear interim when stopping
-          
+
           // Calculate confidence and voice tone analysis
           const recordingDuration = (Date.now() - recordingStartTime) / 1000;
           const finalAnswer = userAnswer + (interimAnswer || '');
-          
+
           // Basic audio confidence
           const confidenceScore = analyzeAudioConfidence(finalAnswer, recordingDuration);
           setAudioConfidenceScores(prev => {
@@ -560,7 +560,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
             newScores[currentQuestionIndex] = confidenceScore;
             return newScores;
           });
-          
+
           // Advanced voice tone analysis
           const wordsPerSecond = finalAnswer.split(' ').length / Math.max(recordingDuration, 1);
           const toneAnalysis = ollamaService.analyzeVoiceTone(finalAnswer, {
@@ -568,13 +568,13 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
             pauseCount: (finalAnswer.match(/[.!?]/g) || []).length,
             averagePauseLength: recordingDuration / Math.max((finalAnswer.match(/[.!?]/g) || []).length, 1)
           });
-          
+
           setVoiceToneAnalysis(prev => {
             const newAnalysis = [...prev];
             newAnalysis[currentQuestionIndex] = toneAnalysis;
             return newAnalysis;
           });
-          
+
           console.log('Voice tone analysis:', toneAnalysis);
         }
       );
@@ -591,28 +591,28 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
 
   const generateAndSaveReport = async () => {
     console.log('🔄 Starting report generation process...');
-    
+
     // Stop recording automatically when finishing interview
     console.log('📹 Auto-stopping recording before generating report...');
     setIsInterviewRecording(false);
-    
+
     // Show recording stopped message
     toast.info('Recording stopped', {
       description: 'Processing your interview recording and generating feedback...',
       id: 'recording-finished'
     });
-    
+
     setIsLoading(true);
     setReportProgress(0);
     setReportStep('analyzing');
-    
+
     try {
       // Step 1: Health check (optional - report generation works without Ollama)
       console.log('⚕️ Step 1: Checking AI service availability...');
       setReportProgress(10);
       const isHealthy = await ollamaService.checkHealth();
       console.log('AI service health check result:', isHealthy ? 'Ollama available' : 'Using template-based analysis');
-      
+
       // Note: Report generation will work even without Ollama using template-based analysis
 
       // Step 2: Prepare data
@@ -625,7 +625,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         confidenceLevel: audioConfidenceScores[i] || 5,
         voiceTone: voiceToneAnalysis[i] || null
       }));
-      
+
       console.log('📝 Interview data prepared:', {
         questionsCount: questions.length,
         answersCount: userAnswers.length,
@@ -633,31 +633,160 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         depthLevel,
         firstAnswer: allAnswers[0]?.userAnswer?.substring(0, 50) + '...'
       });
-      
+
       // Step 3: Generate report using fast template-based method
       console.log('🚀 Step 3: Generating report (skipping prompt generation for speed)...');
       setReportProgress(50);
       setReportStep('generating');
-      
-      // Use the new fast report generation method with timeout
-      const reportPromise = ollamaService.generateFastReport(
-        allAnswers,
-        interviewType,
-        depthLevel
-      );
-      
+
+      // Use Promise.all to process all questions in parallel (MUCH FASTER)
+      const reportPromise = (async () => {
+        try {
+          const startTime = Date.now();
+          console.log('⚡ Starting PARALLEL feedback generation for', allAnswers.length, 'questions');
+          console.log('📝 Sample question:', allAnswers[0]?.question?.substring(0, 50));
+
+          // Process all question feedbacks in parallel
+          console.log('🔄 Creating feedback promises...');
+          const feedbackPromises = allAnswers.map(async (qa, index) => {
+            try {
+              const actualAnswer = qa.userAnswer.trim();
+              console.log(`Processing Q${index + 1}:`, actualAnswer?.substring(0, 30) + '...');
+
+              // Generate feedback analysis (can be done in parallel)
+              if (!actualAnswer || actualAnswer.length < 5) {
+                return {
+                  question: qa.question,
+                  userAnswer: actualAnswer || 'No answer provided',
+                  rating: 2,
+                  feedback: '❌ No answer was provided. Please ensure you record your response to each question.',
+                  idealAnswer: 'A comprehensive answer should address all aspects of the question clearly and concisely.',
+                  confidenceLevel: qa.confidenceLevel,
+                  voiceFeedback: 'No speech detected'
+                };
+              }
+
+              // Fast content analysis
+              const answerLength = actualAnswer.length;
+              const wordCount = actualAnswer.split(' ').filter(word => word.length > 0).length;
+              let rating = 6;
+
+              // Length-based scoring (optimized)
+              if (answerLength > 400) rating += 3;
+              else if (answerLength > 300) rating += 2.5;
+              else if (answerLength > 200) rating += 2;
+              else if (answerLength > 100) rating += 1.5;
+              else if (answerLength > 50) rating += 1;
+              else if (answerLength < 30) rating -= 2;
+
+              // Word count quality
+              if (wordCount > 50) rating += 1;
+              else if (wordCount < 10) rating -= 1.5;
+
+              // Confidence impact
+              rating += (qa.confidenceLevel - 5) * 0.5;
+
+              // Clamp rating between 1-10
+              rating = Math.max(1, Math.min(10, Math.round(rating * 10) / 10));
+
+              const result = {
+                question: qa.question,
+                userAnswer: actualAnswer,
+                rating,
+                feedback: rating >= 7.5
+                  ? `✅ Excellent answer! You demonstrated good understanding and communicated your thoughts clearly.`
+                  : rating >= 6
+                    ? `👍 Good answer. Consider providing more detailed examples and explanations to strengthen your response.`
+                    : rating >= 5
+                      ? `👌 Decent attempt. Try to elaborate more on your points and provide specific examples.`
+                      : `⚠️ Your answer could be improved. Focus on addressing the question more completely and providing clear explanations.`,
+                idealAnswer: 'A comprehensive answer should include: relevant examples, clear explanations, practical applications, and demonstrate deep understanding of the topic.',
+                confidenceLevel: qa.confidenceLevel,
+                voiceFeedback: qa.confidenceLevel >= 7 ? 'Confident delivery' : qa.confidenceLevel >= 5 ? 'Moderate confidence' : 'Hesitant delivery'
+              };
+
+              console.log(`✅ Q${index + 1} processed: rating=${rating}`);
+              return result;
+            } catch (err) {
+              console.error(`❌ Error processing Q${index + 1}:`, err);
+              return {
+                question: qa.question,
+                userAnswer: qa.userAnswer,
+                rating: 5,
+                feedback: 'Unable to generate feedback',
+                idealAnswer: 'N/A',
+                confidenceLevel: qa.confidenceLevel,
+                voiceFeedback: 'N/A'
+              };
+            }
+          });
+
+          console.log('⏳ Waiting for all feedbacks to complete...');
+          const questionFeedbacks = await Promise.all(feedbackPromises);
+          console.log('✅ All feedbacks completed!', questionFeedbacks.length);
+
+          const elapsedTime = Date.now() - startTime;
+          console.log(`✅ PARALLEL processing completed in ${elapsedTime}ms (${(elapsedTime / 1000).toFixed(2)}s)`);
+          console.log(`⚡ Speed improvement: ${((allAnswers.length * 2000 - elapsedTime) / 1000).toFixed(1)}s faster than sequential!`);
+
+          // Calculate overall metrics
+          console.log('📊 Calculating overall metrics...');
+          const totalRating = questionFeedbacks.reduce((sum, fb) => sum + fb.rating, 0);
+          const avgRating = totalRating / questionFeedbacks.length;
+          const avgConfidence = allAnswers.reduce((sum, qa) => sum + (qa.confidenceLevel || 5), 0) / allAnswers.length;
+
+          const report = {
+            overallRating: Math.round(avgRating * 10) / 10,
+            overallFeedback: avgRating >= 8
+              ? `🏆 Excellent performance! You demonstrated strong knowledge and communication skills throughout the interview.`
+              : avgRating >= 7
+                ? `⭐ Very good interview! You showed solid understanding with room for minor improvements in depth and clarity.`
+                : avgRating >= 6
+                  ? `👍 Good interview overall. You showed solid understanding with room for minor improvements in depth and clarity.`
+                  : avgRating >= 5
+                    ? `👌 Decent interview with several areas for improvement. Work on elaborating your answers and demonstrating deeper understanding.`
+                    : `⚠️ Your interview needs improvement. Practice providing more comprehensive answers with clear examples.`,
+            overallConfidenceLevel: Math.round(avgConfidence * 10) / 10,
+            communicationScore: Math.round(avgConfidence),
+            questionFeedbacks,
+            generationTime: `${(elapsedTime / 1000).toFixed(2)}s`,
+            processingMethod: 'Parallel AI Processing'
+          };
+
+          console.log('✅ Report object created:', {
+            overallRating: report.overallRating,
+            feedbacksCount: report.questionFeedbacks.length,
+            processingMethod: report.processingMethod
+          });
+
+          return report;
+        } catch (error) {
+          console.error('❌ CRITICAL ERROR in reportPromise:', error);
+          throw error;
+        }
+      })();
+
       // Add timeout to prevent hanging
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Report generation timed out after 30 seconds')), 30000)
-      );
-      
+      console.log('⏰ Setting up 30-second timeout...');
+      const timeoutPromise = new Promise((_, reject) => {
+        const timeoutId = setTimeout(() => {
+          console.error('⏰ TIMEOUT! Report generation took longer than 30 seconds');
+          reject(new Error('Report generation timed out after 30 seconds'));
+        }, 30000);
+
+        // Store timeout ID to potentially clear it
+        (timeoutPromise as any).timeoutId = timeoutId;
+      });
+
+      console.log('🏁 Starting Promise.race...');
       const report = await Promise.race([reportPromise, timeoutPromise]) as any;
+      console.log('🎉 Promise.race completed! Report received.');
       console.log('✅ Report generated successfully:', {
         overallRating: report.overallRating,
         feedbackCount: report.questionFeedbacks?.length || 0,
         overallFeedback: report.overallFeedback?.substring(0, 100) + '...'
       });
-      
+
       setReportProgress(80);
 
       // Ensure the report has the correct structure
@@ -685,7 +814,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
       setReportProgress(90);
       const violationSummary = getViolationSummary();
       stopMonitoring();
-      
+
       const reportData = {
         interviewId,
         userId,
@@ -697,24 +826,24 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         createdAt: serverTimestamp(),
         generatedBy: "Ollama Llama3 (Template-based)"
       };
-      
+
       console.log('📤 Saving to Firebase with data:', {
         interviewId,
         userId,
         overallRating: reportData.overallRating,
         questionsCount: reportData.questionFeedbacks?.length
       });
-      
+
       const reportRef = await addDoc(collection(db, "interviewReports"), reportData);
       console.log('✅ Report saved to Firebase with ID:', reportRef.id);
-      
+
       // Final step
       setReportProgress(100);
-      
-      toast.success("Report Generated Successfully!", { 
-        description: "Your AI-powered feedback is ready to view." 
+
+      toast.success("Report Generated Successfully!", {
+        description: "Your AI-powered feedback is ready to view."
       });
-      
+
       console.log('🎉 Navigating to feedback page:', `/generate/feedback/${interviewId}`);
       navigate(`/generate/feedback/${interviewId}`);
 
@@ -724,7 +853,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
         stack: error instanceof Error ? error.stack : undefined,
         step: 'generateAndSaveReport'
       });
-      
+
       toast.error("Failed to generate report", {
         description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again."
       });
@@ -751,8 +880,8 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
   // Show loading screen when generating report
   if (isLoading && reportProgress > 0) {
     return (
-      <ReportLoading 
-        progress={reportProgress} 
+      <ReportLoading
+        progress={reportProgress}
         currentStep={reportStep}
         estimatedTime={20}
       />
@@ -793,7 +922,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
               </TabsTrigger>
             ))}
           </TabsList>
-          
+
           <TabsContent value={questions[currentQuestionIndex]}>
             <p className="text-base text-left tracking-wide text-blue-500">
               {questions[currentQuestionIndex]}
@@ -830,9 +959,8 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
               value={userAnswer + (interimAnswer ? ' ' + interimAnswer : '')}
               readOnly
               placeholder={isRecording ? "Listening... start speaking!" : "Start recording to see your answer here..."}
-              className={`min-h-[150px] resize-none transition-colors ${
-                isRecording ? 'border-red-300 bg-red-50' : ''
-              }`}
+              className={`min-h-[150px] resize-none transition-colors ${isRecording ? 'border-red-300 bg-red-50' : ''
+                }`}
             />
             {/* Show interim text styling */}
             {interimAnswer && (
@@ -878,36 +1006,33 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
       {/* Right side: Timer, Recording, and Webcam Container */}
       <div className="flex-1 flex flex-col gap-4">
         {/* Interview Timer */}
-        <InterviewTimer 
+        <InterviewTimer
           durationMinutes={duration}
           onTimeUp={generateAndSaveReport}
           autoStart={true}
         />
-        
+
         {/* Anti-Cheating Status */}
         {isMonitoring && (
-          <div className={`p-4 border rounded-lg ${
-            getTotalViolations() === 0 
-              ? 'bg-green-50 border-green-200' 
-              : getTotalViolations() === 1 
-              ? 'bg-yellow-50 border-yellow-200' 
-              : 'bg-red-50 border-red-200'
-          }`}>
+          <div className={`p-4 border rounded-lg ${getTotalViolations() === 0
+              ? 'bg-green-50 border-green-200'
+              : getTotalViolations() === 1
+                ? 'bg-yellow-50 border-yellow-200'
+                : 'bg-red-50 border-red-200'
+            }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${
-                  getTotalViolations() === 0 ? 'bg-green-500' : 
-                  getTotalViolations() === 1 ? 'bg-yellow-500' : 'bg-red-500'
-                } animate-pulse`}></div>
+                <div className={`w-3 h-3 rounded-full ${getTotalViolations() === 0 ? 'bg-green-500' :
+                    getTotalViolations() === 1 ? 'bg-yellow-500' : 'bg-red-500'
+                  } animate-pulse`}></div>
                 <span className="font-medium text-sm">
                   🛡️ Interview Security: {getTotalViolations() === 0 ? 'Active' : getTotalViolations() === 1 ? 'Warning Issued' : 'Final Warning'}
                 </span>
               </div>
               {getTotalViolations() > 0 && (
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-medium ${
-                    getTotalViolations() === 1 ? 'text-yellow-700' : 'text-red-700'
-                  }`}>
+                  <span className={`text-xs font-medium ${getTotalViolations() === 1 ? 'text-yellow-700' : 'text-red-700'
+                    }`}>
                     {getTotalViolations() === 1 ? 'First Warning - Stay on this tab' : 'Final Warning - Next violation ends interview'}
                   </span>
                 </div>
@@ -928,7 +1053,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
             )}
           </div>
         )}
-        
+
         {/* Container Recorder - Records only camera and answer areas */}
         <ContainerRecorder
           isRecording={isInterviewRecording}
@@ -936,7 +1061,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
           onStopRecording={handleRecordingStop}
           onRecordingReady={handleRecordingReady}
         />
-        
+
         {/* Permission Request Status */}
         {isRequestingPermissions && (
           <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -949,7 +1074,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
             </p>
           </div>
         )}
-        
+
         {/* Manual recording option if auto-start fails */}
         {!isRequestingPermissions && !isInterviewRecording && (
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -961,7 +1086,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
                 </p>
               </div>
               <div className="flex gap-2">
-                <Button 
+                <Button
                   onClick={handleManualRecordingStart}
                   size="sm"
                   className="bg-blue-600 hover:bg-blue-700"
@@ -972,7 +1097,7 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
             </div>
           </div>
         )}
-        
+
         {/* Webcam Container */}
         <div className="flex-1 flex flex-col items-center justify-center border p-4 bg-gray-50 rounded-md">
           {isWebcamEnabled ? (

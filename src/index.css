@@ -1,6 +1,7 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -29,6 +30,7 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
+
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -56,10 +58,12 @@
     --chart-5: 340 75% 55%;
   }
 }
+
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -67,9 +71,13 @@
   .text-outline {
     color: white;
     text-shadow: -1px -1px 0 rgba(0, 0, 0, 0.6),
-      /* Top-left */ 1px -1px 0 rgba(0, 0, 0, 0.6),
-      /* Top-right */ -1px 1px 0 rgba(0, 0, 0, 0.6),
-      /* Bottom-left */ 1px 1px 0 rgba(0, 0, 0, 0.6); /* Bottom-right */
+      /* Top-left */
+      1px -1px 0 rgba(0, 0, 0, 0.6),
+      /* Top-right */
+      -1px 1px 0 rgba(0, 0, 0, 0.6),
+      /* Bottom-left */
+      1px 1px 0 rgba(0, 0, 0, 0.6);
+    /* Bottom-right */
   }
 }
 
@@ -81,4 +89,172 @@
 
 .grayscale-on-hover:hover {
   filter: grayscale(0%);
+}
+
+/* ===== SMOOTH SCROLLING & 120FPS OPTIMIZATIONS ===== */
+
+/* Global smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 2rem;
+}
+
+/* Hardware acceleration for performance */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hardware acceleration for interactive elements - EXCLUDING animate-spin */
+button:not(.animate-spin *),
+a:not(.animate-spin *),
+.card,
+[class*="animate-"]:not(.animate-spin),
+[class*="transition"] {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Smooth transitions - EXCLUDING animate-spin elements */
+a:not(.animate-spin *),
+button:not(.animate-spin *),
+.card,
+input,
+textarea,
+select {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ensure animate-spin works properly */
+.animate-spin {
+  animation: spin 1s linear infinite !important;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Will-change for animated elements */
+.animate-in,
+.animate-out,
+[data-state="open"],
+[data-state="closed"] {
+  will-change: transform, opacity;
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 10px;
+  margin: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  border: 2px solid hsl(var(--background));
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #764ba2 0%, #667eea 100%);
+  box-shadow: 0 0 6px rgba(102, 126, 234, 0.5);
+}
+
+/* Smooth focus outline */
+*:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  transition: outline-offset 0.2s ease;
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animation classes */
+.animate-fade-in {
+  animation: fadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+/* Accessibility: Reduce motion - only for custom animations */
+@media (prefers-reduced-motion: reduce) {
+
+  .animate-fade-in,
+  .animate-scale-in,
+  .animate-slide-up {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  html {
+    scroll-behavior: auto !important;
+  }
 }

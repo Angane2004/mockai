@@ -1,0 +1,21 @@
+/* CRITICAL FIX: Ensure Tailwind animations work */
+/* This file ensures animate-spin and other Tailwind animations are NOT disabled */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Explicitly ensure animate-spin is not overridden */
+.animate-spin {
+    animation: spin 1s linear infinite !important;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

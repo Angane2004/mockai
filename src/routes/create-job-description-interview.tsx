@@ -24,9 +24,10 @@ export const CreateJobDescriptionInterview = () => {
     interviewType: '',
     depthLevel: '',
     numQuestions: 5,
-    duration: 30
+    duration: 30,
+    aptitudeDifficulty: '' // For aptitude tests
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const { userId } = useAuth();
   const navigate = useNavigate();
@@ -40,13 +41,31 @@ export const CreateJobDescriptionInterview = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.interviewName || !formData.jobDescription || !formData.jobTitle || 
-        !formData.interviewType || !formData.depthLevel) {
+
+    // Validate common fields
+    if (!formData.interviewName || !formData.jobDescription || !formData.jobTitle ||
+      !formData.interviewType) {
       toast.error('Missing fields', {
         description: 'Please fill in all required fields'
       });
       return;
+    }
+
+    // Validate specific fields based on interview type
+    if (formData.interviewType === 'Aptitude') {
+      if (!formData.aptitudeDifficulty) {
+        toast.error('Missing fields', {
+          description: 'Please select aptitude difficulty level'
+        });
+        return;
+      }
+    } else {
+      if (!formData.depthLevel) {
+        toast.error('Missing fields', {
+          description: 'Please select difficulty level'
+        });
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -58,7 +77,8 @@ export const CreateJobDescriptionInterview = () => {
         jobDescription: formData.jobDescription,
         companyName: formData.companyName,
         interviewType: formData.interviewType,
-        depthLevel: formData.depthLevel,
+        depthLevel: formData.interviewType === 'Aptitude' ? '' : formData.depthLevel,
+        aptitudeDifficulty: formData.interviewType === 'Aptitude' ? formData.aptitudeDifficulty : '',
         numQuestions: formData.numQuestions,
         duration: formData.duration,
         userId,
@@ -67,7 +87,7 @@ export const CreateJobDescriptionInterview = () => {
       };
 
       const docRef = await addDoc(collection(db, 'interviews'), interviewData);
-      
+
       toast.success('Interview Created! 🎉', {
         description: 'Starting your interview...',
       });
@@ -194,45 +214,100 @@ export const CreateJobDescriptionInterview = () => {
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Technical">Technical</SelectItem>
+                    <SelectItem value="Technical Code">Technical Code</SelectItem>
+                    <SelectItem value="Technical Theory">Technical Theory</SelectItem>
                     <SelectItem value="Behavioral">Behavioral</SelectItem>
                     <SelectItem value="System Design">System Design</SelectItem>
                     <SelectItem value="Mixed">Mixed Interview</SelectItem>
+                    <SelectItem value="Aptitude">Aptitude Test</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>Difficulty Level *</Label>
-                <Select value={formData.depthLevel} onValueChange={(value) => handleInputChange('depthLevel', value)}>
-                  <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
-                    <SelectValue placeholder="Select level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Fresher">Fresher (0-1 years)</SelectItem>
-                    <SelectItem value="Intermediate">Intermediate (2-4 years)</SelectItem>
-                    <SelectItem value="Experienced">Experienced (5+ years)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Conditional rendering based on interview type */}
+              {formData.interviewType === 'Aptitude' ? (
+                <div className="space-y-2">
+                  <Label>Aptitude Difficulty Level *</Label>
+                  <Select value={formData.aptitudeDifficulty} onValueChange={(value) => handleInputChange('aptitudeDifficulty', value)}>
+                    <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
+                      <SelectValue placeholder="Select difficulty" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Easy">Easy</SelectItem>
+                      <SelectItem value="Medium">Medium</SelectItem>
+                      <SelectItem value="Hard">Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : formData.interviewType === 'Technical Code' ? (
+                <>
+                  <div className="space-y-2">
+                    <Label>Difficulty Level *</Label>
+                    <Select value={formData.depthLevel} onValueChange={(value) => handleInputChange('depthLevel', value)}>
+                      <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
+                        <SelectValue placeholder="Select difficulty" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Easy">Easy</SelectItem>
+                        <SelectItem value="Medium">Medium</SelectItem>
+                        <SelectItem value="Hard">Hard</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="numQuestions" className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Questions Count
-                </Label>
-                <Select value={formData.numQuestions.toString()} onValueChange={(value) => handleInputChange('numQuestions', parseInt(value))}>
-                  <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="3">3 Questions</SelectItem>
-                    <SelectItem value="5">5 Questions</SelectItem>
-                    <SelectItem value="7">7 Questions</SelectItem>
-                    <SelectItem value="10">10 Questions</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="numQuestions" className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      Questions Count
+                    </Label>
+                    <Select value={formData.numQuestions.toString()} onValueChange={(value) => handleInputChange('numQuestions', parseInt(value))}>
+                      <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3">3 Questions</SelectItem>
+                        <SelectItem value="5">5 Questions</SelectItem>
+                        <SelectItem value="7">7 Questions</SelectItem>
+                        <SelectItem value="10">10 Questions</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label>Experience Level *</Label>
+                    <Select value={formData.depthLevel} onValueChange={(value) => handleInputChange('depthLevel', value)}>
+                      <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
+                        <SelectValue placeholder="Select level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Fresher">Fresher (0-1 years)</SelectItem>
+                        <SelectItem value="Intermediate">Intermediate (2-4 years)</SelectItem>
+                        <SelectItem value="Experienced">Experienced (5+ years)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="numQuestions" className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      Questions Count
+                    </Label>
+                    <Select value={formData.numQuestions.toString()} onValueChange={(value) => handleInputChange('numQuestions', parseInt(value))}>
+                      <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="3">3 Questions</SelectItem>
+                        <SelectItem value="5">5 Questions</SelectItem>
+                        <SelectItem value="7">7 Questions</SelectItem>
+                        <SelectItem value="10">10 Questions</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Duration */}
@@ -265,7 +340,7 @@ export const CreateJobDescriptionInterview = () => {
                   <div>
                     <h4 className="font-semibold text-blue-900 mb-1">AI-Powered Question Generation</h4>
                     <p className="text-sm text-blue-700">
-                      Our local Llama AI will analyze your job description and create relevant, targeted questions. 
+                      Our local Llama AI will analyze your job description and create relevant, targeted questions.
                       The more detailed your job description, the better the questions will be!
                     </p>
                   </div>

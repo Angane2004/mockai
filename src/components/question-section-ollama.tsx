@@ -768,14 +768,12 @@ export const QuestionSectionOllama = ({ questions, interviewType, depthLevel, du
 
       // Add timeout to prevent hanging
       console.log('⏰ Setting up 30-second timeout...');
+      let reportTimeoutId: ReturnType<typeof setTimeout>;
       const timeoutPromise = new Promise((_, reject) => {
-        const timeoutId = setTimeout(() => {
+        reportTimeoutId = setTimeout(() => {
           console.error('⏰ TIMEOUT! Report generation took longer than 30 seconds');
           reject(new Error('Report generation timed out after 30 seconds'));
         }, 30000);
-
-        // Store timeout ID to potentially clear it
-        (timeoutPromise as any).timeoutId = timeoutId;
       });
 
       console.log('🏁 Starting Promise.race...');

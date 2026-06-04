@@ -123,7 +123,7 @@ src/
 - A [Firebase](https://firebase.google.com) project
 - A [Clerk](https://clerk.com) application
 - A [Google Gemini](https://aistudio.google.com) API key
-- _(Optional)_ [Ollama](https://ollama.com) installed locally for offline AI
+- A [Ollama](https://ollama.com) installed locally for offline AI
 
 ### Setup
 

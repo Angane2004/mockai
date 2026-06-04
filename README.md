@@ -16,7 +16,7 @@
 
 <br/>
 
-A browser-based mock interview platform that uses Google Gemini AI to generate interview questions, evaluate your spoken answers in real time, and deliver a detailed performance report — all without needing a human interviewer.
+A browser-based mock interview platform that generates interview questions, evaluates your spoken answers, and delivers a detailed performance report. It runs on two AI backends — **Ollama (local LLM)** when available on your machine, and **Google Gemini** as the cloud fallback. No human interviewer needed.
 
 ---
 
@@ -29,23 +29,29 @@ flowchart TD
     B --> D[Resume-based]
     B --> E[Aptitude round]
 
-    C --> F[Gemini AI generates questions]
+    C --> F{AI Backend check}
     D --> F
     E --> F
 
-    F --> G[Live Interview Session]
-    G --> G1[Webcam + Screen recording]
-    G --> G2[Speech-to-text transcription]
-    G --> G3[AI evaluates answers in real time]
+    F -->|Ollama running locally| G[Llama3 / Llama2 via localhost:11434]
+    F -->|Ollama unavailable| H[Google Gemini API]
 
-    G1 & G2 & G3 --> H[Session saved to Firebase]
+    G --> I[Questions generated]
+    H --> I
 
-    H --> I[Feedback Report generated]
-    I --> I1[Score per question]
-    I --> I2[Improvement suggestions]
-    I --> I3[Download as PDF]
+    I --> J[Live Interview Session]
+    J --> J1[Webcam + Screen recording]
+    J --> J2[Speech-to-text transcription]
+    J --> J3[AI scores answers in real time]
 
-    I1 & I2 & I3 --> J([Watch session replay])
+    J1 & J2 & J3 --> K[Session saved to Firebase]
+
+    K --> L[Feedback Report]
+    L --> L1[Score per question]
+    L --> L2[Improvement suggestions]
+    L --> L3[Download as PDF]
+
+    L1 & L2 & L3 --> M([Watch session replay])
 ```
 
 ---
@@ -53,7 +59,7 @@ flowchart TD
 ## Features
 
 - Create interviews from a **job description** or your **resume**
-- **Gemini AI** generates role-specific questions and scores your answers
+- **Dual AI backend** — uses Ollama (local LLM) when running, falls back to Gemini automatically
 - **Speech-to-text** captures verbal responses in real time
 - **Webcam + screen recording** for full session replay
 - Detailed **feedback report** with per-question scores and suggestions
@@ -70,7 +76,8 @@ flowchart TD
 |---|---|
 | Frontend | React 18, TypeScript, Vite |
 | Styling | Tailwind CSS, Radix UI, Framer Motion |
-| AI | Google Gemini (`@google/generative-ai`) |
+| AI (local) | Ollama — Llama3 / Llama2 via `localhost:11434` |
+| AI (cloud) | Google Gemini (`@google/generative-ai`) |
 | Auth | Clerk |
 | Database | Firebase Firestore |
 | Hosting | Firebase Hosting / Docker |
@@ -116,6 +123,7 @@ src/
 - A [Firebase](https://firebase.google.com) project
 - A [Clerk](https://clerk.com) application
 - A [Google Gemini](https://aistudio.google.com) API key
+- _(Optional)_ [Ollama](https://ollama.com) installed locally for offline AI
 
 ### Setup
 
@@ -144,7 +152,12 @@ VITE_FIREBASE_PROJECT_ID=...
 VITE_FIREBASE_STORAGE_BUCKET=...
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
+
+# Set to "true" to skip Ollama and always use Gemini
+VITE_DISABLE_OLLAMA=false
 ```
+
+> **Ollama setup (optional):** Install [Ollama](https://ollama.com), then run `ollama pull llama3` or `ollama pull llama2`. The app auto-detects whichever model is available at `http://localhost:11434` and uses it. If Ollama is not running or times out, it silently falls back to Gemini.
 
 ```bash
 # 4. Start dev server

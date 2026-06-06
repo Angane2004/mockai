@@ -1,3 +1,8 @@
+// feedback.tsx
+// Shows the AI-generated feedback report after an interview is completed.
+// Fetches the report from Firestore, plays a confetti animation,
+// and displays an overall score + per-question breakdown.
+
 import { db } from "@/config/firebase.config";
 import { Interview } from "@/types";
 import { useAuth } from "@clerk/clerk-react";
@@ -35,10 +40,12 @@ export const Feedback = () => {
   const { width, height } = useWindowSize();
   const [isConfettiActive, setIsConfettiActive] = useState(true);
 
+  // Redirect if there's no interview ID in the URL
   if (!interviewId) {
     navigate("/generate", { replace: true });
   }
 
+  // Fetches the feedback report from Firestore for this interview + user
   useEffect(() => {
     const fetchReport = async () => {
       try {
@@ -63,10 +70,11 @@ export const Feedback = () => {
     fetchReport();
   }, [interviewId, userId]);
 
+  // Stops the confetti animation after 10 seconds
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsConfettiActive(false);
-    }, 10000); // Stop confetti after 10 seconds
+    }, 10000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -83,10 +91,13 @@ export const Feedback = () => {
 
   return (
     <>
+      {/* Confetti — plays once and stops after 10s */}
       {isConfettiActive && <Confetti width={width} height={height} recycle={false} />}
+
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
         <div className="flex flex-col w-full gap-8 py-8 px-4 max-w-6xl mx-auto">
-          {/* Header Section with Trophy Animation */}
+
+          {/* Header */}
           <div className="text-center space-y-4">
             <div className="flex justify-center mb-6">
               <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 rounded-full">
@@ -101,7 +112,7 @@ export const Feedback = () => {
             </p>
           </div>
 
-          {/* Overall Score Card with Radial Progress */}
+          {/* Overall score card */}
           <Card className="relative overflow-hidden bg-gradient-to-br from-white to-blue-50 border-2 border-blue-200 shadow-xl rounded-2xl">
             <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full opacity-10 transform translate-x-8 -translate-y-8"></div>
             <div className="relative p-8 text-center">
@@ -112,7 +123,7 @@ export const Feedback = () => {
                 <h3 className="text-3xl font-bold text-gray-800">Overall Performance</h3>
               </div>
               
-              {/* Large Rating Display */}
+              {/* Score out of 10 */}
               <div className="flex items-center justify-center gap-4 mb-6">
                 <div className="text-6xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
                   {report.overallRating}
@@ -120,7 +131,7 @@ export const Feedback = () => {
                 <div className="text-2xl text-gray-400 font-medium">/10</div>
               </div>
               
-              {/* Rating Emoji */}
+              {/* Emoji based on score range */}
               <div className="text-4xl mb-4">
                 {report.overallRating >= 9 ? '🏆' : 
                  report.overallRating >= 8 ? '⭐' : 
@@ -129,7 +140,7 @@ export const Feedback = () => {
                  report.overallRating >= 5 ? '😐' : '💪'}
               </div>
               
-              {/* Progress Bar */}
+              {/* Progress bar — width proportional to score */}
               <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
                 <div 
                   className="bg-gradient-to-r from-green-400 to-blue-500 h-3 rounded-full transition-all duration-1000 ease-out"
@@ -141,7 +152,7 @@ export const Feedback = () => {
             </div>
           </Card>
 
-          {/* Section Header */}
+          {/* Per-question breakdown — each question is collapsible */}
           <div className="text-center space-y-2">
             <h2 className="text-3xl font-bold text-gray-800">Question-by-Question Analysis</h2>
             <p className="text-gray-600">Detailed feedback for each interview question</p>
@@ -154,6 +165,7 @@ export const Feedback = () => {
                 value={`question-${index}`}
                 className="border-0 bg-white rounded-2xl shadow-lg overflow-hidden"
               >
+                {/* Question header with rating badge — green/yellow/red based on score */}
                 <AccordionTrigger className="px-6 py-4 hover:no-underline bg-gradient-to-r from-gray-50 to-blue-50">
                   <div className="flex items-center gap-4 w-full">
                     <div className="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
@@ -175,9 +187,10 @@ export const Feedback = () => {
                   </div>
                 </AccordionTrigger>
 
+                {/* Expanded content — user's answer, ideal answer, and AI feedback */}
                 <AccordionContent className="px-6 py-6 space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
-                    {/* Your Answer */}
+                    {/* What the user actually said */}
                     <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-md">
                       <div className="p-5">
                         <div className="flex items-center gap-3 mb-3">
@@ -192,7 +205,7 @@ export const Feedback = () => {
                       </div>
                     </Card>
 
-                    {/* Ideal Answer */}
+                    {/* The AI's ideal answer for comparison */}
                     <Card className="border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 shadow-md">
                       <div className="p-5">
                         <div className="flex items-center gap-3 mb-3">
@@ -208,7 +221,7 @@ export const Feedback = () => {
                     </Card>
                   </div>
 
-                  {/* Feedback */}
+                  {/* AI feedback and tips for improvement */}
                   <Card className="border border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 shadow-md">
                     <div className="p-5">
                       <div className="flex items-center gap-3 mb-3">
@@ -227,7 +240,7 @@ export const Feedback = () => {
             ))}
           </Accordion>
           
-          {/* Action Section */}
+          {/* Call to action — retry or print the report */}
           <Card className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-xl">
             <div className="p-6 text-center">
               <h3 className="text-2xl font-bold mb-2">Ready for Your Next Interview?</h3>

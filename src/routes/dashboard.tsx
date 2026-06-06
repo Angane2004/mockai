@@ -1,3 +1,8 @@
+// dashboard.tsx
+// Main page the user sees after logging in.
+// Shows all their created interviews and recorded sessions.
+// Uses a real-time Firestore listener so the list updates automatically.
+
 import { Headings } from "@/components/headings";
 import { InterviewPin } from "@/components/pin";
 import { EnhancedAddNewButton } from "@/components/enhanced-add-new-button";
@@ -20,7 +25,7 @@ export const Dashboard = () => {
   const [profileLoading, setProfileLoading] = useState(true);
   const { userId } = useAuth();
 
-  // Fetch user profile data
+  // Fetches the user's optional profile data (skills, bio, target role)
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (!userId) return;
@@ -47,6 +52,8 @@ export const Dashboard = () => {
     fetchUserProfile();
   }, [userId]);
 
+  // Real-time listener for the user's interviews
+  // Also checks if each interview has a feedback report (to show the "View Feedback" button)
   useEffect(() => {
     setLoading(true);
     const interviewQuery = query(
@@ -61,12 +68,15 @@ export const Dashboard = () => {
           snapshot.docs.map(async (doc) => {
             const id = doc.id;
             const data = doc.data();
+
+            // Check if a feedback report exists for this interview
             const feedbackQuery = query(
               collection(db, "interviewReports"),
               where("interviewId", "==", id)
             );
             const feedbackSnapshot = await getDocs(feedbackQuery);
             const feedbackGenerated = !feedbackSnapshot.empty;
+
             return {
               id,
               ...data,
@@ -86,6 +96,7 @@ export const Dashboard = () => {
       }
     );
 
+    // Clean up the listener when the component unmounts
     return () => unsubscribe();
   }, [userId]);
 
@@ -101,11 +112,12 @@ export const Dashboard = () => {
 
       <Separator className="my-4 sm:my-8" />
 
-      {/* Interview Section */}
+      {/* Interview cards */}
       <div className="mb-8">
         <h2 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">Your Interviews</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 py-4">
           {loading ? (
+            // Show skeleton placeholders while loading
             Array.from({ length: 6 }).map((_, index) => (
               <Skeleton key={index} className="h-24 md:h-32 rounded-md" />
             ))
@@ -114,6 +126,7 @@ export const Dashboard = () => {
               <InterviewPin key={interview.id} interview={interview} />
             ))
           ) : (
+            // Empty state — shown when the user has no interviews yet
             <div className="col-span-1 sm:col-span-2 lg:col-span-3 w-full flex flex-grow items-center justify-center min-h-[300px] sm:h-96 flex-col px-4">
               <img
                 src="/assets/svg/not-found.svg"
@@ -135,7 +148,7 @@ export const Dashboard = () => {
         </div>
       </div>
 
-      {/* Recorded Sessions Section */}
+      {/* Recorded Sessions — shows locally stored interview recordings */}
       <Separator className="my-8" />
       <LocalRecordedSessions />
     </>

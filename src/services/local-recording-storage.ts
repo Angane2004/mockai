@@ -1,8 +1,7 @@
-/**
- * Local Recording Storage Service
- * Stores video recordings locally using IndexedDB for persistence
- * Much more suitable for large video files than Firebase
- */
+// local-recording-storage.ts
+// Stores interview video recordings in the browser's IndexedDB (not Firebase Storage).
+// IndexedDB can handle large files (50–500MB+) which Firebase Storage isn't ideal for.
+// Only the metadata (no video blob) is also saved to Firestore for cross-device tracking.
 
 interface RecordingMetadata {
   id: string;
@@ -15,7 +14,7 @@ interface RecordingMetadata {
   interviewName?: string;
   interviewType?: string;
   depthLevel?: string;
-  thumbnailBlob?: Blob; // Video thumbnail for preview
+  thumbnailBlob?: Blob;
 }
 
 interface StoredRecording extends RecordingMetadata {
@@ -27,9 +26,7 @@ class LocalRecordingStorage {
   private dbVersion = 1;
   private storeName = 'recordings';
 
-  /**
-   * Initialize IndexedDB database
-   */
+  // Opens the IndexedDB database and creates the object store if it doesn't exist yet
   private async initDB(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.dbVersion);
@@ -44,6 +41,7 @@ class LocalRecordingStorage {
         resolve(request.result);
       };
 
+      // Runs only on first setup or version upgrade — creates the store and indexes
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
         console.log('🔧 Creating IndexedDB object store...');
@@ -59,9 +57,7 @@ class LocalRecordingStorage {
     });
   }
 
-  /**
-   * Generate video thumbnail from recording blob
-   */
+  // Grabs a frame from the video at 2 seconds and saves it as a small JPEG thumbnail
   private async generateThumbnail(videoBlob: Blob): Promise<Blob | null> {
     try {
       console.log('🖼️ Generating video thumbnail...');
@@ -76,13 +72,12 @@ class LocalRecordingStorage {
       
       return new Promise((resolve) => {
         video.onloadedmetadata = () => {
-          // Set canvas dimensions to video dimensions (scaled down)
           const maxWidth = 320;
           const maxHeight = 180;
           
           let { videoWidth, videoHeight } = video;
           
-          // Scale down to max dimensions while maintaining aspect ratio
+          // Scale down proportionally if the video is larger than 320x180
           if (videoWidth > maxWidth || videoHeight > maxHeight) {
             const scale = Math.min(maxWidth / videoWidth, maxHeight / videoHeight);
             videoWidth *= scale;
@@ -92,16 +87,15 @@ class LocalRecordingStorage {
           canvas.width = videoWidth;
           canvas.height = videoHeight;
           
-          // Seek to 2 seconds or 10% of video duration for better thumbnail
+          // Seek to 2s or 10% of duration — avoids black frames at the very start
           const seekTime = Math.min(2, video.duration * 0.1);
           video.currentTime = seekTime;
         };
         
         video.onseeked = () => {
-          // Draw the video frame to canvas
+          // Draw that video frame onto the canvas, then export as JPEG
           ctx!.drawImage(video, 0, 0, canvas.width, canvas.height);
           
-          // Convert canvas to blob
           canvas.toBlob((thumbnailBlob) => {
             console.log('✅ Thumbnail generated:', {
               originalSize: videoBlob.size,
@@ -109,7 +103,6 @@ class LocalRecordingStorage {
               dimensions: `${canvas.width}x${canvas.height}`
             });
             
-            // Clean up
             URL.revokeObjectURL(video.src);
             resolve(thumbnailBlob);
           }, 'image/jpeg', 0.8);
@@ -121,7 +114,6 @@ class LocalRecordingStorage {
           resolve(null);
         };
         
-        // Start loading the video
         video.src = URL.createObjectURL(videoBlob);
         video.load();
       });
@@ -131,9 +123,7 @@ class LocalRecordingStorage {
     }
   }
 
-  /**
-   * Save recording to local storage with thumbnail
-   */
+  // Saves a recording to IndexedDB along with its thumbnail, then syncs metadata to Firestore
   async saveRecording(
     recordingBlob: Blob,
     metadata: Omit<RecordingMetadata, 'id' | 'createdAt' | 'recordingSize'>
@@ -148,7 +138,6 @@ class LocalRecordingStorage {
       const db = await this.initDB();
       const recordingId = `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // Generate thumbnail if it's a video recording
       let thumbnailBlob: Blob | null = null;
       if (recordingBlob.type.startsWith('video/')) {
         console.log('🖼️ Generating thumbnail for video recording...');
@@ -191,9 +180,8 @@ class LocalRecordingStorage {
     }
   }
 
-  /**
-   * Save only metadata to Firebase (for cross-device visibility)
-   */
+  // Saves lightweight metadata (no video blob) to Firestore
+  // This lets other devices know a recording exists even if they can't access the local file
   private async saveMetadataToFirebase(recording: StoredRecording): Promise<void> {
     try {
       const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
@@ -224,9 +212,7 @@ class LocalRecordingStorage {
     }
   }
 
-  /**
-   * Get all recordings for a user
-   */
+  // Returns all recordings for a given user, sorted newest first
   async getUserRecordings(userId: string): Promise<StoredRecording[]> {
     try {
       console.log('🔍 Fetching recordings for user:', userId);
@@ -242,7 +228,6 @@ class LocalRecordingStorage {
           const recordings = request.result;
           console.log('📊 Found recordings locally:', recordings.length);
           
-          // Sort by creation date (newest first)
           recordings.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
           
           resolve(recordings);
@@ -259,9 +244,7 @@ class LocalRecordingStorage {
     }
   }
 
-  /**
-   * Get a specific recording by ID
-   */
+  // Fetches a single recording by its ID
   async getRecording(recordingId: string): Promise<StoredRecording | null> {
     try {
       console.log('🔍 Fetching recording:', recordingId);
@@ -287,9 +270,7 @@ class LocalRecordingStorage {
     }
   }
 
-  /**
-   * Delete a recording
-   */
+  // Permanently deletes a recording from IndexedDB
   async deleteRecording(recordingId: string): Promise<void> {
     try {
       console.log('🗑️ Deleting recording:', recordingId);
@@ -316,9 +297,7 @@ class LocalRecordingStorage {
     }
   }
 
-  /**
-   * Get storage usage statistics
-   */
+  // Returns total recordings count, total size used, and available browser storage
   async getStorageStats(): Promise<{
     totalRecordings: number;
     totalSize: number;
@@ -363,16 +342,13 @@ class LocalRecordingStorage {
     }
   }
 
-  /**
-   * Create a downloadable URL for a recording
-   */
+  // Creates a temporary URL from the video blob — use this as the <video> src
+  // Always call revokeRecordingURL() after you're done to free memory
   createRecordingURL(recording: StoredRecording): string {
     return URL.createObjectURL(recording.videoBlob);
   }
 
-  /**
-   * Create a thumbnail URL for a recording preview
-   */
+  // Creates a temporary URL for the thumbnail image — returns null if no thumbnail exists
   createThumbnailURL(recording: StoredRecording): string | null {
     if (recording.thumbnailBlob) {
       return URL.createObjectURL(recording.thumbnailBlob);
@@ -380,16 +356,12 @@ class LocalRecordingStorage {
     return null;
   }
 
-  /**
-   * Clean up URL after use
-   */
+  // Releases a blob URL from memory — always call this after you're done with the URL
   revokeRecordingURL(url: string): void {
     URL.revokeObjectURL(url);
   }
 
-  /**
-   * Export recording as file download
-   */
+  // Triggers a file download in the browser for the given recording
   downloadRecording(recording: StoredRecording, filename?: string): void {
     const url = this.createRecordingURL(recording);
     const a = document.createElement('a');
@@ -402,8 +374,7 @@ class LocalRecordingStorage {
   }
 }
 
-// Export singleton instance
+// Singleton — import this wherever you need to save, load, or delete recordings
 export const localRecordingStorage = new LocalRecordingStorage();
 
-// Export types for use in components
 export type { RecordingMetadata, StoredRecording };

@@ -1,3 +1,8 @@
+// auth-handler.tsx
+// Runs silently on every page — checks if the logged-in Clerk user
+// already has a profile in Firestore. If not, it creates one.
+// This bridges Clerk (auth) and Firebase (data storage).
+
 import { db } from "@/config/firebase.config";
 import { LoaderPage } from "@/routes/loader-page";
 import { User } from "@/types";
@@ -20,8 +25,11 @@ const AuthHanlder = () => {
       if (isSignedIn && user) {
         setLoading(true);
         try {
+          // Check if user already exists in Firestore
           const userSanp = await getDoc(doc(db, "users", user.id));
+
           if (!userSanp.exists()) {
+            // First time login — save their profile to Firestore
             const userData: User = {
               id: user.id,
               name: user.fullName || user.firstName || "Anonymous",
@@ -44,10 +52,12 @@ const AuthHanlder = () => {
     storeUserData();
   }, [isSignedIn, user, pathname, navigate]);
 
+  // Show a loader while the Firestore write is happening
   if (loading) {
     return <LoaderPage />;
   }
 
+  // This component renders nothing — it only runs a side effect
   return null;
 };
 

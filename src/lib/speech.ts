@@ -1,12 +1,13 @@
-// A basic example for Text-to-Speech (TTS) and Speech-to-Text (STT)
-// This is a starting point, you may need to install libraries or configure a cloud service for a production app.
+// speech.ts
+// Utility functions for Text-to-Speech (reading questions aloud)
+// and Speech-to-Text (capturing the user's spoken answers).
 
-// TextToSpeech.ts
+// Reads text aloud using the browser's built-in speech engine.
+// Pass a voiceName like "Google UK English Female" to use a specific voice.
 export const speak = (text: string, voiceName?: string) => {
     if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(text);
         
-        // Find a specific voice if requested
         const voices = window.speechSynthesis.getVoices();
         const selectedVoice = voices.find(voice => voice.name.includes(voiceName || ''));
         if (selectedVoice) {
@@ -19,23 +20,26 @@ export const speak = (text: string, voiceName?: string) => {
     }
 };
 
-// SpeechToText.ts
+// Starts listening to the microphone and converts speech to text in real time.
+// onResult fires with the final transcript each time the user pauses speaking.
+// onEnd fires when recognition stops.
+// Returns the recognition object so you can stop it later with stopSpeechRecognition().
 export const startSpeechRecognition = (onResult: (text: string) => void, onEnd: () => void) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.lang = 'en-US';
-        recognition.continuous = true;
-        recognition.interimResults = true;
+        recognition.continuous = true;      // Keep listening until stopped manually
+        recognition.interimResults = true;  // Stream partial results while speaking
 
         recognition.onresult = (event) => {
             let interimTranscript = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 const transcript = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
-                    onResult(transcript);
+                    onResult(transcript); // Confirmed words — send to caller
                 } else {
-                    interimTranscript += transcript;
+                    interimTranscript += transcript; // Still being spoken
                 }
             }
             // You might want to display interim results, e.g., on a different state
@@ -53,6 +57,7 @@ export const startSpeechRecognition = (onResult: (text: string) => void, onEnd: 
     }
 };
 
+// Stops an active speech recognition session.
 export const stopSpeechRecognition = (recognition: any) => {
     if (recognition) {
         recognition.stop();

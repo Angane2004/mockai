@@ -1,21 +1,21 @@
-// Admin authentication using PIN-based system
-// In production, store these securely in environment variables or a database
+// admin.ts
+// PIN-based admin authentication.
+
+// Valid admin PINs — in production these should come from env variables, not hardcoded
 const ADMIN_PINS = ["123456", "admin2024", "secure123"];
 
+// Checks the submitted PIN and returns a session token if it's valid
 export const handleAdminLogin = async (req: any, res: any) => {
   const { adminPin } = req.body;
 
   try {
-    // Validate PIN
     if (ADMIN_PINS.includes(adminPin)) {
-      // PIN is valid
       res.status(200).json({ 
         success: true, 
         message: 'Authentication successful',
         sessionToken: generateSessionToken(adminPin)
       });
     } else {
-      // Invalid PIN
       res.status(401).json({ 
         success: false, 
         message: 'Invalid admin PIN' 
@@ -30,13 +30,13 @@ export const handleAdminLogin = async (req: any, res: any) => {
   }
 };
 
-// Helper function to generate a session token
+// Creates a Base64 token from "pin:timestamp" — used to verify identity and session age
 const generateSessionToken = (pin: string): string => {
   const timestamp = Date.now();
   return Buffer.from(`${pin}:${timestamp}`).toString('base64');
 };
 
-// Middleware to verify admin session
+// Middleware that decodes the session token and checks if it's valid and not expired (24h)
 export const verifyAdminSession = (req: any, res: any, next: any) => {
   const sessionToken = req.headers.authorization?.replace('Bearer ', '');
   
@@ -51,7 +51,7 @@ export const verifyAdminSession = (req: any, res: any, next: any) => {
     const decoded = Buffer.from(sessionToken, 'base64').toString('utf-8');
     const [pin, timestamp] = decoded.split(':');
     
-    // Check if PIN is valid and session hasn't expired (24 hours)
+    // Sessions expire after 24 hours
     const isExpired = Date.now() - parseInt(timestamp) > 24 * 60 * 60 * 1000;
     
     if (ADMIN_PINS.includes(pin) && !isExpired) {

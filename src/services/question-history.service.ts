@@ -1,3 +1,8 @@
+// question-history.service.ts
+// Tracks which questions have already been asked to a user across all their interviews.
+// This prevents the AI from repeating the same questions in future sessions.
+// Data is stored in Firestore under the "userQuestionHistory" collection.
+
 import { db } from '@/config/firebase.config';
 import {
     collection,
@@ -10,15 +15,10 @@ import {
     doc
 } from 'firebase/firestore';
 
-/**
- * Service to track and prevent repetitive interview questions
- */
 class QuestionHistoryService {
     private readonly COLLECTION_NAME = 'userQuestionHistory';
 
-    /**
-     * Get all previously asked questions for a user
-     */
+    // Returns a flat list of all questions this user has been asked before
     async getUserAskedQuestions(userId: string): Promise<string[]> {
         try {
             const q = query(
@@ -44,9 +44,7 @@ class QuestionHistoryService {
         }
     }
 
-    /**
-     * Save asked questions for an interview
-     */
+    // Saves all questions asked in a completed interview session
     async saveAskedQuestions(
         userId: string,
         interviewId: string,
@@ -68,9 +66,8 @@ class QuestionHistoryService {
         }
     }
 
-    /**
-     * Filter out already asked questions from a list
-     */
+    // Filters out questions the user has already seen.
+    // Normalizes text before comparing so minor wording differences are caught.
     filterUnaskedQuestions(
         allQuestions: string[],
         askedQuestions: string[]
@@ -79,7 +76,7 @@ class QuestionHistoryService {
             return allQuestions;
         }
 
-        // Normalize questions for comparison (lowercase, trim, remove punctuation)
+        // Lowercase + trim + remove punctuation for fair comparison
         const normalizeQuestion = (q: string) =>
             q.toLowerCase().trim().replace(/[?.!,]/g, '');
 
@@ -94,9 +91,7 @@ class QuestionHistoryService {
         return unasked;
     }
 
-    /**
-     * Get statistics on question usage
-     */
+    // Returns stats on how many questions the user has been asked, broken down by interview type
     async getQuestionStats(userId: string): Promise<{
         totalAsked: number;
         uniqueQuestions: number;
@@ -135,9 +130,7 @@ class QuestionHistoryService {
         }
     }
 
-    /**
-     * Clear question history for a user (useful for testing or reset)
-     */
+    // Soft-deletes all history for a user by setting deleted:true (doesn't actually remove docs)
     async clearUserHistory(userId: string): Promise<void> {
         try {
             const q = query(
@@ -158,4 +151,5 @@ class QuestionHistoryService {
     }
 }
 
+// Singleton — import this wherever you need to read or write question history
 export const questionHistoryService = new QuestionHistoryService();

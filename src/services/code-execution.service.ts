@@ -1,12 +1,12 @@
-/**
- * Judge0 Code Execution Service
- * Handles secure code execution for coding interview questions
- */
+// code-execution.service.ts
+// Sends user code to the Judge0 API (via RapidAPI) for execution in a sandbox.
+// Works by submitting code → getting a token → polling until result is ready.
+// If no API key is set, it falls back to mock results for development.
 
 const JUDGE0_API_URL = 'https://judge0-ce.p.rapidapi.com';
 const RAPIDAPI_KEY = import.meta.env.VITE_RAPIDAPI_KEY || '';
 
-// Language IDs for Judge0
+// Judge0 language IDs — each language has a fixed ID on their platform
 export const LANGUAGE_IDS = {
     python: 71,      // Python 3
     javascript: 63,  // JavaScript (Node.js)
@@ -19,7 +19,7 @@ export const LANGUAGE_IDS = {
 export interface TestCase {
     input: any;
     expectedOutput: any;
-    isHidden: boolean;
+    isHidden: boolean;  // Hidden cases aren't shown to the user
 }
 
 export interface TestResult {
@@ -44,6 +44,8 @@ export interface ExecutionResult {
 }
 
 class CodeExecutionService {
+
+    // Step 1: Submit code to Judge0 — returns a token to check the result later
     private async submitCode(
         code: string,
         languageId: number,
@@ -60,8 +62,8 @@ class CodeExecutionService {
                 source_code: code,
                 language_id: languageId,
                 stdin: stdin,
-                cpu_time_limit: 5, // 5 seconds max
-                memory_limit: 128000, // 128 MB
+                cpu_time_limit: 5,      // Max 5 seconds
+                memory_limit: 128000,   // Max 128 MB
             })
         });
 
@@ -72,6 +74,8 @@ class CodeExecutionService {
         return await response.json();
     }
 
+    // Step 2: Poll Judge0 until execution is done (status ID > 2 means finished)
+    // Status IDs: 1 = queued, 2 = running, 3 = accepted, 4+ = some kind of error
     private async getSubmissionResult(token: string, maxAttempts: number = 10): Promise<any> {
         for (let i = 0; i < maxAttempts; i++) {
             const response = await fetch(
@@ -90,33 +94,31 @@ class CodeExecutionService {
 
             const result = await response.json();
 
-            // Status IDs: 1-2 = In Queue/Processing, 3 = Accepted, 4+ = Errors
             if (result.status.id > 2) {
                 return result;
             }
 
-            // Wait before next attempt
+            // Wait 1 second before trying again
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
         throw new Error('Execution timeout - please try again');
     }
 
+    // Normalizes output before comparing — trims whitespace and lowercases
     private normalizeOutput(output: string): string {
         return output.trim().toLowerCase().replace(/\s+/g, ' ');
     }
 
+    // Returns true if actual output matches expected output (after normalization)
     private compareOutputs(actual: any, expected: any): boolean {
-        // Convert to strings and normalize
         const actualStr = String(actual);
         const expectedStr = String(expected);
 
         return this.normalizeOutput(actualStr) === this.normalizeOutput(expectedStr);
     }
 
-    /**
-     * Run code against multiple test cases
-     */
+    // Runs the user's code against all test cases and returns pass/fail results
     async runTests(
         code: string,
         language: string,
@@ -128,6 +130,7 @@ class CodeExecutionService {
             throw new Error(`Unsupported language: ${language}`);
         }
 
+        // No API key — use mock results so the feature still works in dev
         if (!RAPIDAPI_KEY) {
             console.warn('⚠️ RAPIDAPI_KEY not set, using mock results');
             return this.runMockTests(testCases);
@@ -141,25 +144,21 @@ class CodeExecutionService {
 
         for (const testCase of testCases) {
             try {
-                // Prepare input
                 const stdin = typeof testCase.input === 'object'
                     ? JSON.stringify(testCase.input)
                     : String(testCase.input);
 
-                // Submit code
                 const { token } = await this.submitCode(code, languageId, stdin);
-
-                // Get result
                 const result = await this.getSubmissionResult(token);
 
-                const executionTime = parseFloat(result.time) * 1000 || 0; // Convert to ms
+                const executionTime = parseFloat(result.time) * 1000 || 0;
                 const memory = result.memory || 0;
 
                 totalTime += executionTime;
                 totalMemory += memory;
 
-                // Check if passed
                 const actualOutput = result.stdout || result.stderr || '';
+                // Test passes only if Judge0 returned "Accepted" AND the output matches
                 const passed = result.status.id === 3 &&
                     this.compareOutputs(actualOutput, testCase.expectedOutput);
 
@@ -202,18 +201,14 @@ class CodeExecutionService {
         };
     }
 
-    /**
-     * Mock test execution for development/demo
-     */
+    // Used when no API key is set — simulates test results for demo/testing
     private async runMockTests(testCases: TestCase[]): Promise<ExecutionResult> {
         console.log('🎭 Using mock test execution (no API key)');
 
-        // Simulate async execution
         await new Promise(resolve => setTimeout(resolve, 1500));
 
         const testResults: TestResult[] = testCases.map((testCase, index) => {
-            // Mock: pass first 2 tests, fail rest randomly
-            const passed = index < 2 || Math.random() > 0.5;
+            const passed = index < 2 || Math.random() > 0.5; // First 2 always pass
 
             return {
                 passed,
@@ -240,9 +235,7 @@ class CodeExecutionService {
         };
     }
 
-    /**
-     * Quick syntax check (compile only, no execution)
-     */
+    // Does a compile-only check without running the code — used for syntax validation
     async checkSyntax(code: string, language: string): Promise<{ valid: boolean; error?: string }> {
         const languageId = LANGUAGE_IDS[language as keyof typeof LANGUAGE_IDS];
 
@@ -271,4 +264,5 @@ class CodeExecutionService {
     }
 }
 
+// Singleton — import this instance wherever you need to run or check code
 export const codeExecutionService = new CodeExecutionService();

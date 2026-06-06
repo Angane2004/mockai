@@ -1,3 +1,8 @@
+// useAntiCheating.ts
+// Custom hook that monitors the user during an interview to detect cheating.
+// It tracks tab switches, focus loss, right-clicks, and blocked keyboard shortcuts.
+// At 1 violation → warning toast. At 2 violations → interview is terminated.
+
 import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 
@@ -15,11 +20,12 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
     onTabSwitch,
     onViolation,
     onMaxViolationsReached,
-    maxViolations = 2, // Changed to 2: warning at 1, terminate at 2
+    maxViolations = 2, // 1 = warning, 2 = terminate
     enableWarnings = true,
-    strictMode = true // Changed to true for stricter monitoring
+    strictMode = true
   } = options;
 
+  // Tracks how many times each type of violation has occurred
   const [violations, setViolations] = useState({
     tabSwitches: 0,
     visibilityChanges: 0,
@@ -31,6 +37,7 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
 
+  // Called every time a violation is detected — increments the count and shows a toast
   const logViolation = useCallback((type: keyof typeof violations, details?: any) => {
     console.log(`👁️ BEFORE violation - Current violations:`, violations);
     
@@ -59,16 +66,18 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
         };
 
         if (totalViolations === 1) {
+          // First offence — warn the user
           toast.warning(warningMessages[type], {
             description: "⚠️ WARNING: One more violation will end your interview!"
           });
         } else if (totalViolations >= maxViolations) {
+          // Second offence — end the interview
           toast.error("❌ Interview Terminated", {
             description: "Multiple cheating violations detected. Interview session ended.",
             duration: 10000
           });
           
-          // Trigger interview termination
+          // Small delay so the error toast is visible before the interview closes
           setTimeout(() => {
             if (onMaxViolationsReached) {
               onMaxViolationsReached();
@@ -77,7 +86,6 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
         }
       }
 
-      // Call violation callback immediately with updated data
       const violationData = { count: newCount, totalViolations, details, timestamp: new Date() };
       console.log(`📡 Calling onViolation callback with:`, violationData);
       onViolation?.(type, violationData);
@@ -87,23 +95,21 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
     });
   }, [maxViolations, enableWarnings, strictMode, onViolation, onTabSwitch, onMaxViolationsReached]);
 
-  // Tab/Window visibility detection with improved logic
+  // Fires when the user switches to another tab
+  // Uses a 1.5s delay to avoid false positives (e.g. quick alt-tab back)
   const handleVisibilityChange = useCallback(() => {
     if (!isMonitoring) return;
     
     if (document.hidden) {
       console.log('👁️ Tab became hidden, starting violation timer...');
       
-      // Shorter delay for faster detection but still avoiding false positives
       const timeoutId = setTimeout(() => {
         if (document.hidden) {
-          // Only log if tab is still hidden after 1.5 seconds
           console.log('🚨 Confirmed tab switch - logging violation');
           logViolation('tabSwitches', { reason: 'tab_hidden', duration: 1500 });
         }
       }, 1500);
       
-      // Clear timeout if visibility returns quickly
       const handleVisibilityReturn = () => {
         if (!document.hidden) {
           console.log('👁️ Tab became visible again - clearing violation timer');
@@ -116,20 +122,18 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
     }
   }, [isMonitoring, logViolation]);
 
-  // Window focus detection with debouncing to avoid false positives
+  // Fires when the browser window loses focus
+  // 3s delay to avoid flagging things like clicking the address bar
   const handleFocusChange = useCallback((event: FocusEvent) => {
     if (!isMonitoring) return;
 
     if (event.type === 'blur') {
-      // Add a delay to avoid false positives from legitimate interactions (like clicking address bar)
       const timeoutId = setTimeout(() => {
         if (!document.hasFocus()) {
-          // Only log if window is still blurred after 3 seconds (likely intentional navigation away)
           logViolation('focusLoss', { reason: 'window_blur', duration: 3000 });
         }
       }, 3000);
       
-      // Clear timeout if focus returns quickly
       const handleFocusReturn = () => {
         if (document.hasFocus()) {
           clearTimeout(timeoutId);
@@ -141,7 +145,7 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
     }
   }, [isMonitoring, logViolation]);
 
-  // Context menu (right-click) detection
+  // Blocks right-click (context menu) during the interview
   const handleContextMenu = useCallback((event: MouseEvent) => {
     if (!isMonitoring) return;
 
@@ -149,38 +153,25 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
     logViolation('contextMenu', { x: event.clientX, y: event.clientY });
   }, [isMonitoring, logViolation]);
 
-  // Keyboard shortcut detection
+  // Blocks keyboard shortcuts that could let the user navigate away or open dev tools
+  // e.g. Alt+Tab, Ctrl+Tab, F12, Ctrl+U, Ctrl+Shift+I etc.
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (!isMonitoring) return;
 
-    // Detect common cheating shortcuts
     const prohibitedShortcuts = [
-      // Alt+Tab (Windows task switching)
-      { alt: true, key: 'Tab' },
-      // Ctrl+Tab (Browser tab switching)
-      { ctrl: true, key: 'Tab' },
-      // Ctrl+Shift+Tab (Reverse browser tab switching)
+      { alt: true, key: 'Tab' },           // Alt+Tab — task switch
+      { ctrl: true, key: 'Tab' },           // Ctrl+Tab — browser tab switch
       { ctrl: true, shift: true, key: 'Tab' },
-      // Ctrl+T (New tab)
-      { ctrl: true, key: 't' },
-      // Ctrl+W (Close tab)
-      { ctrl: true, key: 'w' },
-      // Ctrl+N (New window)
-      { ctrl: true, key: 'n' },
-      // F5 (Refresh)
-      { key: 'F5' },
-      // Ctrl+R (Refresh)
-      { ctrl: true, key: 'r' },
-      // F12 (Developer tools)
-      { key: 'F12' },
-      // Ctrl+Shift+I (Developer tools)
-      { ctrl: true, shift: true, key: 'I' },
-      // Ctrl+U (View source)
-      { ctrl: true, key: 'u' },
-      // Ctrl+Shift+J (Console)
-      { ctrl: true, shift: true, key: 'J' },
-      // Ctrl+Shift+C (Inspector)
-      { ctrl: true, shift: true, key: 'C' }
+      { ctrl: true, key: 't' },             // Ctrl+T — new tab
+      { ctrl: true, key: 'w' },             // Ctrl+W — close tab
+      { ctrl: true, key: 'n' },             // Ctrl+N — new window
+      { key: 'F5' },                        // F5 — refresh
+      { ctrl: true, key: 'r' },             // Ctrl+R — refresh
+      { key: 'F12' },                       // F12 — dev tools
+      { ctrl: true, shift: true, key: 'I' },// Ctrl+Shift+I — dev tools
+      { ctrl: true, key: 'u' },             // Ctrl+U — view source
+      { ctrl: true, shift: true, key: 'J' },// Ctrl+Shift+J — console
+      { ctrl: true, shift: true, key: 'C' } // Ctrl+Shift+C — inspector
     ];
 
     const isProhibited = prohibitedShortcuts.some(shortcut => {
@@ -203,7 +194,7 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
     }
   }, [isMonitoring, logViolation]);
 
-  // Page unload/beforeunload detection
+  // Shows a browser dialog if the user tries to close/refresh the page mid-interview
   const handleBeforeUnload = useCallback((event: BeforeUnloadEvent) => {
     if (!isMonitoring) return;
 
@@ -213,6 +204,7 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
     return message;
   }, [isMonitoring]);
 
+  // Call this to start monitoring — attaches all event listeners
   const startMonitoring = useCallback(() => {
     setIsMonitoring(true);
     setStartTime(new Date());
@@ -224,6 +216,7 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
     }
   }, [enableWarnings]);
 
+  // Call this to stop monitoring — event listeners get cleaned up via useEffect
   const stopMonitoring = useCallback(() => {
     setIsMonitoring(false);
     
@@ -234,6 +227,7 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
     }
   }, [enableWarnings, startTime]);
 
+  // Resets all violation counters back to zero
   const resetViolations = useCallback(() => {
     setViolations({
       tabSwitches: 0,
@@ -244,7 +238,7 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
     });
   }, []);
 
-  // Attach event listeners
+  // Attach all event listeners when monitoring starts, remove them when it stops
   useEffect(() => {
     if (isMonitoring) {
       document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -265,10 +259,12 @@ export const useAntiCheating = (options: AntiCheatingOptions = {}) => {
     }
   }, [isMonitoring, handleVisibilityChange, handleFocusChange, handleContextMenu, handleKeyDown, handleBeforeUnload]);
 
+  // Returns the total number of violations across all types
   const getTotalViolations = useCallback(() => {
     return Object.values(violations).reduce((sum, count) => sum + count, 0);
   }, [violations]);
 
+  // Returns a summary object — used to save integrity data at the end of the interview
   const getViolationSummary = useCallback(() => {
     const total = getTotalViolations();
     const duration = startTime ? Math.round((Date.now() - startTime.getTime()) / 1000 / 60) : 0;

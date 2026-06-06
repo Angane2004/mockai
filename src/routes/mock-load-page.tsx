@@ -1,4 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+// mock-load-page.tsx
+// Pre-interview setup page shown before the user starts a session.
+// Loads the interview details from Firestore, lets the user preview their webcam,
+// and has a "Start" button that takes them to the live interview.
+
 import { db } from "@/config/firebase.config";
 import { Interview } from "@/types";
 import { doc, getDoc } from "firebase/firestore";
@@ -20,6 +25,7 @@ export const MockLoadPage = () => {
 
   const navigate = useNavigate();
 
+  // Fetch the interview document from Firestore using the ID in the URL
   useEffect(() => {
     setIsLoading(true);
     const fetchInterview = async () => {
@@ -47,6 +53,7 @@ export const MockLoadPage = () => {
     return <LoaderPage className="w-full h-[70vh]" />;
   }
 
+  // Redirect if no interview ID in the URL or document not found
   if (!interviewId) {
     navigate("/generate", { replace: true });
   }
@@ -57,12 +64,14 @@ export const MockLoadPage = () => {
 
   return (
     <div className="flex flex-col w-full gap-8 py-5">
+      {/* Breadcrumb navigation + Start button */}
       <div className="flex items-center justify-between w-full">
         <CustomBreadCrumb
           breadCrumbPage={interview?.name || ""}
           breadCrumpItems={[{ label: "Mock Interviews", link: "/generate" }]}
         />
 
+        {/* Takes the user to the actual interview session */}
         <Link to={`/generate/interview/${interviewId}/start`}>
           <Button size={"sm"}>
             Start <Sparkles />
@@ -70,8 +79,10 @@ export const MockLoadPage = () => {
         </Link>
       </div>
 
+      {/* Interview details card */}
       {interview && <InterviewPin interview={interview} onMockPage />}
 
+      {/* Info alert — explains the format and clarifies the webcam isn't recorded */}
       <Alert className="bg-yellow-100/50 border-yellow-200 p-4 rounded-lg flex items-start gap-3 -mt-3">
         <Lightbulb className="h-5 w-5 text-yellow-600" />
         <div>
@@ -80,7 +91,7 @@ export const MockLoadPage = () => {
           </AlertTitle>
           <AlertDescription className="text-sm text-yellow-700 mt-1">
             Please enable your webcam and microphone to start the AI-generated
-            mock interview. The interview consists of five questions. You’ll
+            mock interview. The interview consists of five questions. You'll
             receive a personalized report based on your responses at the end.{" "}
             <br />
             <br />
@@ -91,6 +102,7 @@ export const MockLoadPage = () => {
         </div>
       </Alert>
 
+      {/* Webcam preview area — shows a live feed or a camera icon placeholder */}
       <div className="flex items-center justify-center w-full h-full">
         <div className="w-full h-[400px] md:w-96 flex flex-col items-center justify-center border p-4 bg-gray-50 rounded-md">
           {isWebCamEnabled ? (
@@ -105,6 +117,7 @@ export const MockLoadPage = () => {
         </div>
       </div>
 
+      {/* Toggle button to enable or disable the webcam preview */}
       <div className="flex items-center justify-center">
         <Button onClick={() => setIsWebCamEnabled(!isWebCamEnabled)}>
           {isWebCamEnabled ? "Disable Webcam" : "Enable Webcam"}

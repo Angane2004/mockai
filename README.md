@@ -211,7 +211,7 @@ docker run -p 80:80 aimock
 1. Fork the repo
 2. Create a branch: `git checkout -b feature/your-feature`
 3. Commit: `git commit -m "add your feature"`
-4. Push and open a pull request
+4. Push and open a pull request.
 
 ---
 

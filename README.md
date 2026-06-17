@@ -177,7 +177,7 @@ pnpm build
 firebase deploy
 ```
 
-### Docker
+### Docker -
 
 ```bash
 docker build -t aimock .
